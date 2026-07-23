@@ -16,7 +16,7 @@ lazy val microservice = Project(appName, file("."))
   .enablePlugins(PlayScala, SbtDistributablesPlugin)
   .disablePlugins(JUnitXmlReportPlugin)
   .settings(libraryDependencies ++= AppDependencies.compile ++ AppDependencies.test)
-  .settings(PlayKeys.playDefaultPort := 5000)
+  .settings(PlayKeys.playDefaultPort := 5003)
   .settings(CodeCoverageSettings.settings)
   // needed to eliminate "-Flag set repeatedly" warnings
   .settings(scalacOptions ~= (options => options.distinct))
