@@ -28,5 +28,6 @@ lazy val it = project
   // gives the `it` project access to the `microservice` project's Test and Compile dependencies and source code
   .dependsOn(microservice % "test->test")
   .enablePlugins(PlayScala)
+  .disablePlugins(JUnitXmlReportPlugin)
   .settings(scalacOptions ~= (options => options.distinct))
   .settings(DefaultBuildSettings.itSettings())
