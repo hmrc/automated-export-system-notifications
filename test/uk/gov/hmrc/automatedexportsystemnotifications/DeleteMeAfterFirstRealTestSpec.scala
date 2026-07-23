@@ -17,11 +17,14 @@
 package uk.gov.hmrc.automatedexportsystemnotifications
 
 import org.scalatest.freespec.AnyFreeSpecLike
+import org.scalatest.matchers.should.Matchers
 
-/**
- * Temporary test class that forces sbt to generate a `test-reports` directory so that Jenkins
- * build stage can pass without errors like:
- * "ERROR: Specified HTML directory '/home/jenkins/workspace/automated-export-system-team/automated-export-system-notifications/target/test-reports/html-report' does not exist."
- * Delete after the very first real test is created.
- */
-class DeleteMeAfterFirstRealTestSpec extends AnyFreeSpecLike
+/** Temporary test class that forces sbt to generate a `test-reports` directory so that Jenkins build stage can pass without errors like: "ERROR:
+  * Specified HTML directory
+  * '/home/jenkins/workspace/automated-export-system-team/automated-export-system-notifications/target/test-reports/html-report' does not exist."
+  * Delete after the very first real test is created.
+  */
+class DeleteMeAfterFirstRealTestSpec extends AnyFreeSpecLike, Matchers:
+  "dummyTest" in {
+    1 shouldBe 1
+  }
