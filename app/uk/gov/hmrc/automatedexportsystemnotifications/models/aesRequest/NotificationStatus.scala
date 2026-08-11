@@ -14,15 +14,12 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.automatedexportsystemnotifications
+package uk.gov.hmrc.automatedexportsystemnotifications.models.aesRequest
 
-import play.api.{Configuration, Environment}
-import play.api.inject.{Binding, Module => AppModule}
+sealed trait NotificationStatus { def value: Int }
 
-import java.time.Clock
-
-class Module extends AppModule:
-
-  override def bindings(environment: Environment, configuration: Configuration): Seq[Binding[_]] =
-    bind[Clock].toInstance(Clock.systemDefaultZone) :: // inject if current time needs to be controlled in unit tests
-      Nil
+object NotificationStatus {
+  case object Accepted extends NotificationStatus { val value = 1 }
+  case object Diversion extends NotificationStatus { val value = 2 }
+  case object Rejected extends NotificationStatus { val value = 3 }
+}
