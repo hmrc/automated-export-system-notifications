@@ -16,4 +16,44 @@
 
 package uk.gov.hmrc.automatedexportsystemnotifications.services
 
-class AesService {}
+import javax.inject.{Inject, Singleton}
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.automatedexportsystemnotifications.connectors.AesConnector
+import uk.gov.hmrc.automatedexportsystemnotifications.models.aesRequest.{NotificationError, NotificationPayload, NotificationStatus}
+import uk.gov.hmrc.automatedexportsystemnotifications.xmlWriters.*
+
+import java.time.{Clock, OffsetDateTime, ZoneOffset}
+import scala.concurrent.Future
+
+@Singleton
+class AesService @Inject() (
+  connector: AesConnector,
+  clock:     Clock
+) {
+
+  def sendNotification(
+    correlationId: String,
+    eori:          String,
+    mrn:           String,
+    status:        NotificationStatus,
+    errors:        List[NotificationError]
+  )(implicit hc: HeaderCarrier): Future[Either[String, Unit]] = {
+
+    val payload = NotificationPayload(
+      correlationId = correlationId,
+      eori = eori,
+      mrn = mrn,
+      dateCreated = OffsetDateTime.now(clock).withOffsetSameInstant(ZoneOffset.UTC),
+      status = status,
+      errors = errors
+    )
+
+    AesNotificationWriter.toXml(payload) match {
+      case Left(err) =>
+        Future.successful(Left(s"Failed to build AES notification XML: $err"))
+
+      case Right(xmlElem) =>
+        connector.send(xmlElem.toString())
+    }
+  }
+}

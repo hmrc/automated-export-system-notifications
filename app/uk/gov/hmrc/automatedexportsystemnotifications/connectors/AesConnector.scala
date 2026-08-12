@@ -16,4 +16,36 @@
 
 package uk.gov.hmrc.automatedexportsystemnotifications.connectors
 
-class AesConnector {}
+import play.api.Configuration
+import play.api.http.ContentTypes
+import play.api.libs.ws.writeableOf_String
+import uk.gov.hmrc.http.HttpReads.Implicits.*
+import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.{HeaderCarrier, HttpReads, HttpResponse, StringContextOps}
+
+import javax.inject.{Inject, Singleton}
+import scala.concurrent.{ExecutionContext, Future}
+
+@Singleton
+class AesConnector @Inject() (
+  config: Configuration,
+  http:   HttpClientV2
+)(implicit ec: ExecutionContext) {
+
+  private val endpoint  = config.get[String]("microservice.services.aes.url")
+  private val authToken = config.get[String]("microservice.services.aes.authorizationToken")
+
+  def send(xml: String)(implicit hc: HeaderCarrier): Future[Either[String, Unit]] =
+    http
+      .post(url"$endpoint")
+      .setHeader(
+        "Authorization" -> authToken,
+        "Content-Type"  -> ContentTypes.XML
+      )
+      .withBody(xml)
+      .execute[HttpResponse]
+      .map { resp =>
+        if (resp.status == 204) Right(())
+        else Left(s"Expected 204, got ${resp.status}. Body: ${resp.body}")
+      }
+}

@@ -38,13 +38,11 @@ object ErrorMapper {
   import ErrorSource._
 
   private val ie906Map: Map[Int, UnifiedErrorCode] = Map(
-    12 -> InvalidMrn,
-    34 -> MissingField
+    90 -> InvalidMrn
   )
 
   private val ie917Map: Map[Int, UnifiedErrorCode] = Map(
-    12 -> MissingField,
-    99 -> InvalidMrn
+    13 -> MissingField
   )
 
   def toUnified(source: ErrorSource, rawCode: Int): UnifiedErrorCode =
