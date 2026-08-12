@@ -40,7 +40,7 @@ class NotificationController @Inject() (
     extends AbstractController(cc)
     with Logging {
 
-  def handle: Action[AnyContent] = validatedRequestAction.async { implicit req =>
+  def notification: Action[AnyContent] = validatedRequestAction.async { implicit req =>
     process(req).map {
       case Right(_) =>
         NoContent

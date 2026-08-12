@@ -42,7 +42,7 @@ class NotificationControllerSpec extends BaseSpec {
     val validatedRequestAction: ValidatedRequestAction =
       new ValidatedRequestAction(parser, mockAppConfig)
 
-  "NotificationController.handle" - {
+  "NotificationController.notification" - {
 
     "return 400 when xml payload is missing" in new Setup {
       val request = FakeRequest(POST, "/notifications")
@@ -50,7 +50,7 @@ class NotificationControllerSpec extends BaseSpec {
 
       val controller = new NotificationController(cc, validatedRequestAction, mockService, fixedClock)
 
-      val result = controller.handle(request)
+      val result = controller.notification(request)
 
       status(result)          shouldBe BAD_REQUEST
       contentAsString(result) shouldBe "Request body is required"
@@ -64,7 +64,7 @@ class NotificationControllerSpec extends BaseSpec {
         """<AESDigitalNotification><Body><messageCode>CC507C</messageCode>"""
       val badRequest = FakeRequest(POST, "/notifications").withTextBody(badXml).withHeaders("Authorization" -> "test-token")
 
-      val result = controller.handle(badRequest)
+      val result = controller.notification(badRequest)
 
       status(result)        shouldBe BAD_REQUEST
       contentAsString(result) should include("Invalid XML payload")
@@ -102,7 +102,7 @@ class NotificationControllerSpec extends BaseSpec {
           .withTextBody(xml)
           .withHeaders("x-correlation-id" -> "corr-123", "Authorization" -> "test-token")
 
-      val result = controller.handle(request)
+      val result = controller.notification(request)
 
       status(result) shouldBe NO_CONTENT
       verify(mockService, times(1)).sendNotification(
@@ -146,7 +146,7 @@ class NotificationControllerSpec extends BaseSpec {
           .withTextBody(xml)
           .withHeaders("x-correlation-id" -> "corr-123", "Authorization" -> "test-token")
 
-      val result = controller.handle(request)
+      val result = controller.notification(request)
 
       status(result)          shouldBe BAD_GATEWAY
       contentAsString(result) shouldBe "Failed to call AES backend service"

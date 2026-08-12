@@ -18,5 +18,8 @@ package uk.gov.hmrc.automatedexportsystemnotifications.config
 
 import com.google.inject.AbstractModule
 
+import java.time.Clock
+
 class GuiceModule extends AbstractModule:
-  override def configure(): Unit = {}
+  override def configure(): Unit =
+    bind(classOf[Clock]).toInstance(Clock.systemUTC())
