@@ -14,13 +14,20 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.automatedexportsystemnotifications.config
+package uk.gov.hmrc.automatedexportsystemnotifications.helpers
 
-import javax.inject.{Inject, Singleton}
-import play.api.Configuration
+import org.mockito.Mockito.reset
+import org.scalatest.BeforeAndAfterEach
+import org.scalatestplus.mockito.MockitoSugar
+import uk.gov.hmrc.automatedexportsystemnotifications.config.AppConfig
 
-@Singleton
-class AppConfig @Inject() (config: Configuration):
+trait AllMocks extends MockitoSugar with BeforeAndAfterEach:
+  me: org.scalatest.Suite =>
+  val mockAppConfig: AppConfig = mock[AppConfig]
 
-  val appName:  String = config.get[String]("appName")
-  val eisToken: String = config.getOptional[String]("auth.expectedAuthorizationHeader").getOrElse("")
+  abstract override protected def beforeEach(): Unit =
+    super.beforeEach()
+
+    Seq[AnyRef](
+      mockAppConfig
+    ).foreach(reset(_))

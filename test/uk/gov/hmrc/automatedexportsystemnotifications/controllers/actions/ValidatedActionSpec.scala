@@ -14,13 +14,6 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.automatedexportsystemnotifications.config
+package uk.gov.hmrc.automatedexportsystemnotifications.controllers.actions
 
-import javax.inject.{Inject, Singleton}
-import play.api.Configuration
-
-@Singleton
-class AppConfig @Inject() (config: Configuration):
-
-  val appName:  String = config.get[String]("appName")
-  val eisToken: String = config.getOptional[String]("auth.expectedAuthorizationHeader").getOrElse("")
+class ValidatedActionSpec {}

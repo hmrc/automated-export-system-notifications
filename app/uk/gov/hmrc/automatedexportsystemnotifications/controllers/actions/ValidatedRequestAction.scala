@@ -19,9 +19,10 @@ package uk.gov.hmrc.automatedexportsystemnotifications.controllers.actions
 import play.api.mvc.{Request, WrappedRequest}
 
 import javax.inject.{Inject, Singleton}
-import play.api.Configuration
 import play.api.Logging
-import play.api.mvc._
+import play.api.mvc.*
+import uk.gov.hmrc.automatedexportsystemnotifications.config.AppConfig
+
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.XML
 import scala.util.Try
@@ -30,21 +31,20 @@ case class ValidatedRequest[A](request: Request[A]) extends WrappedRequest[A](re
 
 @Singleton
 class ValidatedRequestAction @Inject() (
-  val parser: BodyParsers.Default,
-  config:     Configuration
+  val parser: BodyParser[AnyContent],
+  appConfig:  AppConfig
 )(implicit ec: ExecutionContext)
     extends ActionBuilder[ValidatedRequest, AnyContent]
     with ActionRefiner[Request, ValidatedRequest]
     with Logging {
 
-  private val expectedAuthHeader: String =
-    config.getOptional[String]("auth.expectedAuthorizationHeader").getOrElse("")
+  private val expectedAuthHeader: String = appConfig.eisToken
 
   override def executionContext: ExecutionContext = ec
 
   override protected def refine[A](request: Request[A]): Future[Either[Result, ValidatedRequest[A]]] = {
     val maybeAuth = request.headers.get("Authorization")
-    if (maybeAuth.forall(_ != expectedAuthHeader)) { // TODO: get auth header from config
+    if (maybeAuth.forall(_ != expectedAuthHeader)) {
       logger.warn(s"Unauthorized request. Provided Authorization header: ${maybeAuth.getOrElse("<missing>")}")
       Future.successful(Left(Results.Unauthorized("Invalid Authorization header")))
     } else {
