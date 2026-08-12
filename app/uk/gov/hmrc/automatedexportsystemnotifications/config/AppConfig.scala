@@ -23,4 +23,5 @@ import play.api.Configuration
 class AppConfig @Inject() (config: Configuration):
 
   val appName:  String = config.get[String]("appName")
-  val eisToken: String = config.getOptional[String]("auth.expectedAuthorizationHeader").getOrElse("")
+  val eisToken: String = config.getOptional[String]("microservice.services.eis-response.bearer-token").getOrElse("")
+  val aesToken: String = config.getOptional[String]("microservice.services.aes.bearer-token").getOrElse("")

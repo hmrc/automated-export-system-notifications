@@ -1,1 +1,3 @@
 # microservice specific routes
+
+POST        /notification            uk.gov.hmrc.automatedexportsystemnotifications.controllers.NotificationController.notification()

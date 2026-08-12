@@ -32,10 +32,16 @@ class AesConnector @Inject() (
   http:   HttpClientV2
 )(implicit ec: ExecutionContext) {
 
-  private val endpoint  = config.get[String]("microservice.services.aes.url")
-  private val authToken = config.get[String]("microservice.services.aes.authorizationToken")
+  private val endpoint = "http://" +
+    config.get[String]("microservice.services.aes.host") + ":" + config.get[String]("microservice.services.aes.port") + "/aes/notifications"
+  private val authToken = config.get[String]("microservice.services.aes.bearer-token")
 
-  def send(xml: String)(implicit hc: HeaderCarrier): Future[Either[String, Unit]] =
+  def send(xml: String)(implicit hc: HeaderCarrier): Future[Either[String, Unit]] = {
+    Console.println(s"Sending AES notification to $endpoint with auth token $authToken and XML: $xml with hc: $hc")
+    Future.successful(Right(()))
+  }
+
+  def sends(xml: String)(implicit hc: HeaderCarrier): Future[Either[String, Unit]] =
     http
       .post(url"$endpoint")
       .setHeader(
