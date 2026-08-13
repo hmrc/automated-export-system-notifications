@@ -32,11 +32,11 @@ object AesNotificationWriter {
         <dateCreated>{dtf.format(payload.dateCreated)}</dateCreated>
         <status>{payload.status.value.toString}</status>
         {
-        if (payload.errors.nonEmpty) {
-          <errors>
-          {payload.errors.map(toErrorXml)}
-        </errors>
-        } else NodeSeq.Empty
+        payload.errors
+          .filter(_.nonEmpty)
+          .map: errs =>
+            <errors>{errs.map(toErrorXml)}</errors>
+          .getOrElse(NodeSeq.Empty)
       }
       </notification>
     }
@@ -49,8 +49,9 @@ object AesNotificationWriter {
     </error>
 
   private def validate(payload: NotificationPayload): Either[String, Unit] =
-    if (payload.errors.exists(_.code.trim.isEmpty))
-      Left("Each error.code is required and must be non-empty")
-    else
-      Right(())
+    payload.errors match
+      case None       => Right(())
+      case Some(errs) =>
+        if errs.exists(e => e.code.trim.isEmpty) then Left("Each error.code is required and must be non-empty")
+        else Right(())
 }

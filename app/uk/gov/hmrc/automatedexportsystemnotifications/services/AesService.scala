@@ -36,7 +36,7 @@ class AesService @Inject() (
     eori:          String,
     mrn:           String,
     status:        NotificationStatus,
-    errors:        List[NotificationError]
+    errors:        Option[List[NotificationError]]
   )(implicit hc: HeaderCarrier): Future[Either[String, Unit]] = {
 
     val payload = NotificationPayload(

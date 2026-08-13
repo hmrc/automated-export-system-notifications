@@ -24,5 +24,5 @@ case class NotificationPayload(
   mrn:           String,
   dateCreated:   OffsetDateTime,
   status:        NotificationStatus,
-  errors:        List[NotificationError]
+  errors:        Option[List[NotificationError]]
 )

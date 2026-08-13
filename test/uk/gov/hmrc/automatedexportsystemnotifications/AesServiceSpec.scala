@@ -47,7 +47,7 @@ class AesServiceSpec extends BaseSpec {
           eori = "GB123456789000",
           mrn = "MRN123",
           status = NotificationStatus.Accepted,
-          errors = Nil
+          errors = None
         )
         .futureValue
 
@@ -65,7 +65,7 @@ class AesServiceSpec extends BaseSpec {
           eori = "GB123456789000",
           mrn = "MRN123",
           status = NotificationStatus.Rejected,
-          errors = List(NotificationError(code = "   ", description = None, path = None))
+          errors = Some(List(NotificationError(code = "   ", description = None, path = None)))
         )
         .futureValue
 
@@ -86,7 +86,7 @@ class AesServiceSpec extends BaseSpec {
           eori = "GB123456789000",
           mrn = "MRN123",
           status = NotificationStatus.Accepted,
-          errors = Nil
+          errors = None
         )
         .futureValue
 

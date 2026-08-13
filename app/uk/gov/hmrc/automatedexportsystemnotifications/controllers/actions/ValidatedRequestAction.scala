@@ -16,23 +16,20 @@
 
 package uk.gov.hmrc.automatedexportsystemnotifications.controllers.actions
 
-import play.api.mvc.{Request, WrappedRequest}
 import play.api.Logging
 import play.api.mvc.*
 import uk.gov.hmrc.automatedexportsystemnotifications.config.AppConfig
 
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
-import scala.xml.XML
 import scala.util.Try
+import scala.xml.XML
 
 case class ValidatedRequest[A](request: Request[A]) extends WrappedRequest[A](request)
 
-import play.api.mvc.{AnyContent, BodyParsers, Request, Result}
-import javax.inject.{Inject, Singleton}
-
 @Singleton
 class ValidatedRequestAction @Inject() (
-  val parser: BodyParsers.Default,
+  val parser: BodyParser[AnyContent],
   appConfig:  AppConfig
 )(implicit ec: ExecutionContext)
     extends ActionBuilder[ValidatedRequest, AnyContent]

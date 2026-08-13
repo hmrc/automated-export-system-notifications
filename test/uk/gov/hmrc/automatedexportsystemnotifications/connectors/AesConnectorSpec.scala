@@ -19,7 +19,6 @@ package uk.gov.hmrc.automatedexportsystemnotifications.connectors
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.*
 import play.api.Configuration
-import play.api.http.ContentTypes
 import uk.gov.hmrc.automatedexportsystemnotifications.helpers.BaseSpec
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.client.{HttpClientV2, RequestBuilder}
@@ -34,8 +33,9 @@ class AesConnectorSpec extends BaseSpec {
       val mockHttp           = mock[HttpClientV2]
       val mockRequestBuilder = mock[RequestBuilder]
       val config             = Configuration(
-        "microservice.services.aes.url"                -> "http://localhost:1111/aes",
-        "microservice.services.aes.authorizationToken" -> "Bearer test-token"
+        "microservice.services.aes.host"         -> "localhost",
+        "microservice.services.aes.port"         -> "1111",
+        "microservice.services.aes.bearer-token" -> "test-token"
       )
 
       when(mockHttp.post(any())(any())).thenReturn(mockRequestBuilder)
@@ -51,8 +51,8 @@ class AesConnectorSpec extends BaseSpec {
       result shouldBe Right(())
 
       verify(mockRequestBuilder).setHeader(
-        "Authorization" -> "Bearer test-token",
-        "Content-Type"  -> ContentTypes.XML
+        "Authorization" -> "test-token",
+        "Content-Type"  -> "application/xml; charset=utf-8"
       )
       verify(mockRequestBuilder).withBody(any())(any(), any(), any())
     }
@@ -61,21 +61,22 @@ class AesConnectorSpec extends BaseSpec {
       val mockHttp           = mock[HttpClientV2]
       val mockRequestBuilder = mock[RequestBuilder]
       val config             = Configuration(
-        "microservice.services.aes.url"                -> "http://localhost:1111/aes",
-        "microservice.services.aes.authorizationToken" -> "Bearer test-token"
+        "microservice.services.aes.host"         -> "localhost",
+        "microservice.services.aes.port"         -> "1111",
+        "microservice.services.aes.bearer-token" -> "test-token"
       )
 
       when(mockHttp.post(any())(any())).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.withBody(any[String])(any(), any(), any())).thenReturn(mockRequestBuilder)
       when(mockRequestBuilder.execute[HttpResponse](any(), any()))
-        .thenReturn(Future.successful(HttpResponse(500, "boom")))
+        .thenReturn(Future.successful(HttpResponse(500, "some-error")))
 
       val connector = new AesConnector(config, mockHttp)
 
       val result = connector.send("<notification/>").futureValue
 
-      result shouldBe Left("Expected 204, got 500. Body: boom")
+      result shouldBe Left("Expected 204, got 500. Body: some-error")
     }
   }
 }

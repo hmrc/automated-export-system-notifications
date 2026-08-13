@@ -94,16 +94,21 @@ class NotificationController @Inject() (
           case AckBody.ActionCodes.DIVERSION                  => NotificationStatus.Diversion
           case _                                              => NotificationStatus.Rejected
         }
-        NotificationPayload(correlationId, a.eori, a.MRN, now, status, Nil)
+        NotificationPayload(correlationId, a.eori, a.MRN, now, status, None)
 
       case IncomingPayload.IE906(b) =>
         NotificationPayload(
-          correlationId,
-          b.eori,
-          b.MRN,
-          now,
-          NotificationStatus.Rejected,
-          b.FunctionalError.map(e => NotificationError(e.errorCode.toString, Some(e.errorReason), Some(e.errorPointer)))
+          correlationId = correlationId,
+          eori = b.eori,
+          mrn = b.MRN,
+          dateCreated = now,
+          status = NotificationStatus.Rejected,
+          errors = Some(b.FunctionalError.map: e =>
+            NotificationError(
+              code = e.errorCode.toString,
+              description = Some(e.errorReason),
+              path = Some(e.errorPointer)
+            ))
         )
 
       case IncomingPayload.IE917(b) =>
@@ -113,7 +118,7 @@ class NotificationController @Inject() (
           b.MRN,
           now,
           NotificationStatus.Rejected,
-          b.XmlError.map(e => NotificationError(e.errorCode.toString, Some(e.errorText), Some(e.errorPointer)))
+          Some(b.XmlError.map(e => NotificationError(e.errorCode.toString, Some(e.errorText), Some(e.errorPointer))))
         )
     }
   }

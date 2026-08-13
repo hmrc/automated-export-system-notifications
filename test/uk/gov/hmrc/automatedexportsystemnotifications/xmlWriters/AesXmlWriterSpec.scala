@@ -36,7 +36,7 @@ class AesXmlWriterSpec extends BaseSpec {
           eori = "GB123456",
           mrn = "MRN123456",
           status = NotificationStatus.Accepted,
-          errors = Nil
+          errors = None
         )
 
         val result = AesNotificationWriter.toXml(payload)
