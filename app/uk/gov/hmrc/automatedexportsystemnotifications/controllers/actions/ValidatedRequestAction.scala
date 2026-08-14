@@ -29,8 +29,8 @@ case class ValidatedRequest[A](request: Request[A]) extends WrappedRequest[A](re
 
 @Singleton
 class ValidatedRequestAction @Inject() (
-  val parser: BodyParser[AnyContent],
-  appConfig:  AppConfig
+  bodyParsers: BodyParsers.Default,
+  appConfig:   AppConfig
 )(implicit ec: ExecutionContext)
     extends ActionBuilder[ValidatedRequest, AnyContent]
     with ActionRefiner[Request, ValidatedRequest]
@@ -38,9 +38,11 @@ class ValidatedRequestAction @Inject() (
 
   private val expectedAuthHeader: String = appConfig.eisToken
 
-  override def executionContext: ExecutionContext = ec
+  override def parser: BodyParser[AnyContent] = bodyParsers
 
-  override protected def refine[A](request: Request[A]): Future[Either[Result, ValidatedRequest[A]]] = {
+  override protected def executionContext: ExecutionContext = ec
+
+  override def refine[A](request: Request[A]): Future[Either[Result, ValidatedRequest[A]]] = {
     val maybeAuth = request.headers.get("Authorization")
     if (maybeAuth.forall(_ != expectedAuthHeader)) {
       logger.warn(s"Unauthorized request. Provided Authorization header: ${maybeAuth.getOrElse("<missing>")}")

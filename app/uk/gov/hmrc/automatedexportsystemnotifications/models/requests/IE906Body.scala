@@ -22,7 +22,3 @@ case class IE906Body(
   eori:            String,
   FunctionalError: List[FunctionalError]
 )
-
-object IE506Body {
-  // implicit val format: Format[IE506Body] = Json.format[IE506Body]
-}

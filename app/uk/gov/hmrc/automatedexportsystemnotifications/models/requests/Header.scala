@@ -19,5 +19,3 @@ package uk.gov.hmrc.automatedexportsystemnotifications.models.requests
 import org.apache.pekko.http.javadsl.model.DateTime
 
 case class Header(MessageSender: String, MessageRecipient: String, PreparationDateAndTime: DateTime, MessageType: String, CorrelationId: String)
-
-object Header {}

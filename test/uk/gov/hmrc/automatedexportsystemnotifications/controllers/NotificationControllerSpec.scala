@@ -26,8 +26,10 @@ import uk.gov.hmrc.automatedexportsystemnotifications.models.aesRequest.*
 import uk.gov.hmrc.automatedexportsystemnotifications.services.AesService
 import uk.gov.hmrc.http.HeaderCarrier
 import play.api.test.Helpers.stubControllerComponents
+
 import java.time.{Clock, Instant, ZoneOffset}
-import play.api.mvc.{AnyContent, BodyParser}
+import play.api.mvc.BodyParsers
+
 import scala.concurrent.Future
 
 class NotificationControllerSpec extends BaseSpec {
@@ -37,11 +39,11 @@ class NotificationControllerSpec extends BaseSpec {
     when(mockAppConfig.eisToken).thenReturn("test-token")
     val fixedClock: Clock = Clock.fixed(Instant.parse("2026-08-11T12:00:00Z"), ZoneOffset.UTC)
 
-    val cc = stubControllerComponents()
-    private val parser: BodyParser[AnyContent] = cc.parsers.default
+    val cc                  = stubControllerComponents()
+    private val bodyParsers = new BodyParsers.Default(cc.parsers)
 
     val validatedRequestAction: ValidatedRequestAction =
-      new ValidatedRequestAction(parser, mockAppConfig)
+      new ValidatedRequestAction(bodyParsers, mockAppConfig)
 
   "NotificationController.notification" - {
 

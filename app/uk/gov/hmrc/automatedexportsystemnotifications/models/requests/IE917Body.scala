@@ -22,7 +22,3 @@ case class IE917Body(
   eori:        String,
   XmlError:    List[XmlError]
 )
-
-object IE917Body {
-  // implicit val format: Format[IE917Body] = Json.format[IE917Body]
-}

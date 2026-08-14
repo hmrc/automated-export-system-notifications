@@ -16,14 +16,9 @@
 
 package uk.gov.hmrc.automatedexportsystemnotifications.models.requests
 
-// Represents one XML error item
 case class XmlError(
   errorPointer:      String,
   errorCode:         Int,
   errorText:         String,
   originalAttribute: Option[String]
 )
-
-object XmlError {
-  // implicit val format: Format[XmlError] = Json.format[XmlError]
-}

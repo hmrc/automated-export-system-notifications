@@ -22,7 +22,3 @@ case class FunctionalError(
   errorReason:       String,
   originalAttribute: Option[String]
 )
-
-object FunctionalError {
-  // implicit val format: Format[FunctionalError] = Json.format[FunctionalError]
-}

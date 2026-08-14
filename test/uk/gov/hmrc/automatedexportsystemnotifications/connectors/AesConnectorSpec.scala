@@ -18,33 +18,30 @@ package uk.gov.hmrc.automatedexportsystemnotifications.connectors
 
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.*
-import play.api.Configuration
 import uk.gov.hmrc.automatedexportsystemnotifications.helpers.BaseSpec
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.client.{HttpClientV2, RequestBuilder}
 
 import scala.concurrent.Future
 
-class AesConnectorSpec extends BaseSpec {
+class AesConnectorSpec extends BaseSpec:
+
+  trait Setup:
+    val mockHttp           = mock[HttpClientV2]
+    val mockRequestBuilder = mock[RequestBuilder]
+    when(mockAppConfig.aesToken).thenReturn("test-token")
+    when(mockAppConfig.aesEndPoint).thenReturn("http://localhost:1111/notification")
+    when(mockHttp.post(any())(any())).thenReturn(mockRequestBuilder)
+    when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
+    when(mockRequestBuilder.withBody(any[String])(any(), any(), any())).thenReturn(mockRequestBuilder)
 
   "AesConnector.send" - {
 
-    "return Right(()) when downstream returns 204" in {
-      val mockHttp           = mock[HttpClientV2]
-      val mockRequestBuilder = mock[RequestBuilder]
-      val config             = Configuration(
-        "microservice.services.aes.host"         -> "localhost",
-        "microservice.services.aes.port"         -> "1111",
-        "microservice.services.aes.bearer-token" -> "test-token"
-      )
-
-      when(mockHttp.post(any())(any())).thenReturn(mockRequestBuilder)
-      when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
-      when(mockRequestBuilder.withBody(any[String])(any(), any(), any())).thenReturn(mockRequestBuilder)
+    "return Right(()) when downstream returns 204" in new Setup {
       when(mockRequestBuilder.execute[HttpResponse](any(), any()))
         .thenReturn(Future.successful(HttpResponse(204, "")))
 
-      val connector = new AesConnector(config, mockHttp)
+      val connector = new AesConnector(mockAppConfig, mockHttp)
 
       val result = connector.send("<notification/>").futureValue
 
@@ -57,26 +54,14 @@ class AesConnectorSpec extends BaseSpec {
       verify(mockRequestBuilder).withBody(any())(any(), any(), any())
     }
 
-    "return Left(...) when downstream returns non-204" in {
-      val mockHttp           = mock[HttpClientV2]
-      val mockRequestBuilder = mock[RequestBuilder]
-      val config             = Configuration(
-        "microservice.services.aes.host"         -> "localhost",
-        "microservice.services.aes.port"         -> "1111",
-        "microservice.services.aes.bearer-token" -> "test-token"
-      )
-
-      when(mockHttp.post(any())(any())).thenReturn(mockRequestBuilder)
-      when(mockRequestBuilder.setHeader(any())).thenReturn(mockRequestBuilder)
-      when(mockRequestBuilder.withBody(any[String])(any(), any(), any())).thenReturn(mockRequestBuilder)
+    "return Left when downstream returns non-204" in new Setup {
       when(mockRequestBuilder.execute[HttpResponse](any(), any()))
         .thenReturn(Future.successful(HttpResponse(500, "some-error")))
 
-      val connector = new AesConnector(config, mockHttp)
+      val connector = new AesConnector(mockAppConfig, mockHttp)
 
       val result = connector.send("<notification/>").futureValue
 
       result shouldBe Left("Expected 204, got 500. Body: some-error")
     }
   }
-}

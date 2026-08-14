@@ -44,4 +44,3 @@ trait BaseSpec
   val contentType:      (String, String) = "Content-Type" -> "application/xml"
 
   implicit val fakeRequest: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
-  //  .withHeaders(TestData.validAuthHeaders)

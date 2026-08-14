@@ -16,9 +16,9 @@
 
 package uk.gov.hmrc.automatedexportsystemnotifications.connectors
 
-import play.api.Configuration
 import play.api.http.ContentTypes
 import play.api.libs.ws.writeableOf_String
+import uk.gov.hmrc.automatedexportsystemnotifications.config.AppConfig
 import uk.gov.hmrc.http.HttpReads.Implicits.*
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, HttpReads, HttpResponse, StringContextOps}
@@ -28,15 +28,12 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class AesConnector @Inject() (
-  config: Configuration,
-  http:   HttpClientV2
+  appConfig: AppConfig,
+  http:      HttpClientV2
 )(implicit ec: ExecutionContext) {
 
-  private val endpoint = "http://" +
-    config.get[String]("microservice.services.aes.host") + ":" + config.get[String](
-      "microservice.services.aes.port"
-    ) + "/automated-export-system/notifications"
-  private val authToken = config.get[String]("microservice.services.aes.bearer-token")
+  private val endpoint  = appConfig.aesEndPoint
+  private val authToken = appConfig.aesToken
 
   def send(xml: String)(implicit hc: HeaderCarrier): Future[Either[String, Unit]] =
     http
