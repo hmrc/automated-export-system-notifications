@@ -29,3 +29,6 @@ class AppConfig @Inject() (config: Configuration):
     config.get[String]("microservice.services.aes.host") +
     ":" + config.get[String]("microservice.services.aes.port") +
     "/automated-export-system/notifications"
+
+  // TODO: Delete when the back end endpoint is created.
+  val stubSubmissionResponse: Boolean = true
