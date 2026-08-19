@@ -14,15 +14,8 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.automatedexportsystemnotifications
+package uk.gov.hmrc.automatedexportsystemnotifications.models.requests
 
-import play.api.{Configuration, Environment}
-import play.api.inject.{Binding, Module => AppModule}
+import org.apache.pekko.http.javadsl.model.DateTime
 
-import java.time.Clock
-
-class Module extends AppModule:
-
-  override def bindings(environment: Environment, configuration: Configuration): Seq[Binding[_]] =
-    bind[Clock].toInstance(Clock.systemDefaultZone) :: // inject if current time needs to be controlled in unit tests
-      Nil
+case class Header(MessageSender: String, MessageRecipient: String, PreparationDateAndTime: DateTime, MessageType: String, CorrelationId: String)
