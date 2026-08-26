@@ -17,7 +17,7 @@
 package uk.gov.hmrc.automatedexportsystemnotifications.parsers
 
 import uk.gov.hmrc.automatedexportsystemnotifications.helpers.BaseSpec
-import uk.gov.hmrc.automatedexportsystemnotifications.models.requests.{AckBody, FunctionalError, IE906Body, IE917Body, IncomingPayload, XmlError}
+import uk.gov.hmrc.automatedexportsystemnotifications.models.requests.{AckBody, FunctionalError, IE906Body, IE917Body, IncomingPayload, XMLError}
 
 class EisPayloadXmlParserSpec extends BaseSpec {
 
@@ -102,17 +102,17 @@ class EisPayloadXmlParserSpec extends BaseSpec {
           |  <Body>
           |  <messageCode>CD917C</messageCode>
           |  <MRN>MRN917</MRN>
-          |  <XmlError>
+          |  <XMLError>
           |    <errorPointer>xptr-1</errorPointer>
           |    <errorCode>300</errorCode>
           |    <errorText>ERRTXT1</errorText>
           |    <originalAttribute>orig-1</originalAttribute>
-          |  </XmlError>
-          |  <XmlError>
+          |  </XMLError>
+          |  <XMLError>
           |    <errorPointer>xptr-2</errorPointer>
           |    <errorCode>301</errorCode>
           |    <errorText>ERRTXT2</errorText>
-          |  </XmlError>
+          |  </XMLError>
           |  </Body>
           |</AESDigitalNotification>""".stripMargin
 
@@ -125,8 +125,8 @@ class EisPayloadXmlParserSpec extends BaseSpec {
             MRN = "MRN917",
             eori = "GB123456789000",
             XmlError = List(
-              XmlError("xptr-1", 300, "ERRTXT1", Some("orig-1")),
-              XmlError("xptr-2", 301, "ERRTXT2", None)
+              XMLError("xptr-1", 300, "ERRTXT1", Some("orig-1")),
+              XMLError("xptr-2", 301, "ERRTXT2", None)
             )
           )
         )

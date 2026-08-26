@@ -65,7 +65,7 @@ class AesServiceSpec extends BaseSpec {
           eori = "GB123456789000",
           mrn = "MRN123",
           status = NotificationStatus.Rejected,
-          errors = Some(List(NotificationError(code = "   ", description = None, path = None)))
+          errors = Some(List(NotificationError(code = "   ", description = None, path = None, originalValue = None)))
         )
         .futureValue
 

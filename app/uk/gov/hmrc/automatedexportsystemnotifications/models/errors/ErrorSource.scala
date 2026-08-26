@@ -14,11 +14,10 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.automatedexportsystemnotifications.models.requests
+package uk.gov.hmrc.automatedexportsystemnotifications.models.errors
 
-case class IE917Body(
-  MessageCode: String = "CD917C",
-  MRN:         String,
-  eori:        String,
-  XmlError:    List[XMLError]
-)
+sealed trait ErrorSource
+
+object ErrorSource:
+  case object IE906 extends ErrorSource
+  case object IE917 extends ErrorSource

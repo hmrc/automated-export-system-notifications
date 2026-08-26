@@ -20,10 +20,12 @@ import org.mockito.Mockito.reset
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.mockito.MockitoSugar
 import uk.gov.hmrc.automatedexportsystemnotifications.config.AppConfig
+import uk.gov.hmrc.automatedexportsystemnotifications.services.AesService
 
 trait AllMocks extends MockitoSugar with BeforeAndAfterEach:
   me: org.scalatest.Suite =>
-  val mockAppConfig: AppConfig = mock[AppConfig]
+  val mockAppConfig: AppConfig  = mock[AppConfig]
+  val mockService:   AesService = mock[AesService]
 
   abstract override protected def beforeEach(): Unit =
     super.beforeEach()

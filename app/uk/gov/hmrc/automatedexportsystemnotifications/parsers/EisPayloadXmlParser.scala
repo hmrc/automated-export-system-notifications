@@ -21,7 +21,7 @@ import uk.gov.hmrc.automatedexportsystemnotifications.models.requests.*
 import scala.util.Try
 import scala.xml.{Elem, Node, NodeSeq}
 
-object EisPayloadXmlParser {
+object EisPayloadXmlParser:
 
   def parse(xmlString: String): Either[String, IncomingPayload] =
     Try(scala.xml.XML.loadString(xmlString)).toEither.left.map(_.getMessage).flatMap(parse)
@@ -59,7 +59,7 @@ object EisPayloadXmlParser {
       mrn    <- Helpers.requiredText(xml, "MRN")
       header <- XmlNav.requiredNode(root, "Header")
       eori   <- XmlNav.requiredText(header, "messageRecipient")
-      errors <- parseXmlErrors(xml \ "XmlError")
+      errors <- parseXmlErrors(xml \ "XMLError")
     } yield IE917Body(MRN = mrn, eori = eori, XmlError = errors)
 
   private def parseFunctionalErrors(nodes: NodeSeq): Either[String, List[FunctionalError]] = {
@@ -79,13 +79,13 @@ object EisPayloadXmlParser {
     Helpers.sequence(parsed)
   }
 
-  private def parseXmlErrors(nodes: NodeSeq): Either[String, List[XmlError]] = {
+  private def parseXmlErrors(nodes: NodeSeq): Either[String, List[XMLError]] = {
     val parsed = nodes.map { n =>
       for {
         pointer <- Helpers.requiredText(n, "errorPointer")
         code    <- Helpers.requiredInt(n, "errorCode")
         text    <- Helpers.requiredText(n, "errorText")
-      } yield XmlError(
+      } yield XMLError(
         errorPointer = pointer,
         errorCode = code,
         errorText = text,
@@ -95,4 +95,3 @@ object EisPayloadXmlParser {
 
     Helpers.sequence(parsed)
   }
-}

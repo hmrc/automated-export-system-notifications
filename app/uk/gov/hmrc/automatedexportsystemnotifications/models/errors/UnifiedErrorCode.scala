@@ -17,37 +17,133 @@
 package uk.gov.hmrc.automatedexportsystemnotifications.models.errors
 
 sealed trait UnifiedErrorCode {
-  def code: String
+  def code:        String
+  def description: String
 }
+/*
+    26
+    50
+    51
+    52
+    92
+    94
+    95
+ */
+object UnifiedErrorCode:
+  case object InvalidFormatDucr extends UnifiedErrorCode {
+    override val code        = "INVALID_FORMAT_DUCR"
+    override val description = "Enter the DUCR in the correct format"
+  }
 
-object UnifiedErrorCode {
-  case object InvalidMrn extends UnifiedErrorCode { val code = "INVALID_MRN" }
-  case object MissingField extends UnifiedErrorCode { val code = "MISSING_FIELD" }
-  case object Unknown extends UnifiedErrorCode { val code = "UNKNOWN_ERROR" }
-}
+  case object CodelistViolation extends UnifiedErrorCode {
+    override val code        = "CODELIST_VIOLATION"
+    override val description = "There is a problem with the service"
+  }
 
-sealed trait ErrorSource
-object ErrorSource {
-  case object IE906 extends ErrorSource
-  case object IE917 extends ErrorSource
-}
+  case object MissingConditionViolation extends UnifiedErrorCode {
+    override val code        = "CONDITION_VIOLATION_MISSING"
+    override val description = "There is a problem with the service"
+  }
 
-object ErrorMapper {
+  case object RuleViolation extends UnifiedErrorCode {
+    override val code        = "RULE_VIOLATION"
+    override val description = "There is a problem with the service"
+  }
 
-  import UnifiedErrorCode._
-  import ErrorSource._
+  case object ConditionNotAllowedViolation extends UnifiedErrorCode {
+    override val code        = "CONDITION_VIOLATION_NOT_ALLOWED"
+    override val description = "There is a problem with the service"
+  }
 
-  private val ie906Map: Map[Int, UnifiedErrorCode] = Map(
-    90 -> InvalidMrn
-  )
+  case object DuplicatedMessageId extends UnifiedErrorCode {
+    override val code        = "DUPLICATED_MESSAGE_ID"
+    override val description = "There is a problem with the service"
+  }
 
-  private val ie917Map: Map[Int, UnifiedErrorCode] = Map(
-    13 -> MissingField
-  )
+  case object RoleBaseAuthFailed extends UnifiedErrorCode {
+    override val code        = "ROLEBASED_AUTH_FAILED"
+    override val description = "There is a problem with the service"
+  }
 
-  def toUnified(source: ErrorSource, rawCode: Int): UnifiedErrorCode =
-    source match {
-      case IE906 => ie906Map.getOrElse(rawCode, Unknown)
-      case IE917 => ie917Map.getOrElse(rawCode, Unknown)
-    }
-}
+  case object MucrShut extends UnifiedErrorCode {
+    override val code        = "MUCR_SHUT"
+    override val description = "MUCR can no longer be updated"
+  }
+
+  case object TransitionalConstraintViolation extends UnifiedErrorCode {
+    override val code        = "TRANSITIONAL_CONSTRAINT_VIOLATION"
+    override val description = "There is a problem with the service"
+  }
+
+  case object EDIViolation extends UnifiedErrorCode {
+    override val code        = "EDI_VIOLATION_POST_DOWNGRADE"
+    override val description = "There is a problem with the service"
+  }
+
+  case object FunctionalViolation extends UnifiedErrorCode {
+    override val code        = "FUNCTIONAL_VIOLATION_POST_DOWNGRADE"
+    override val description = "There is a problem with the service"
+  }
+
+  case object UnknownMrn extends UnifiedErrorCode {
+    override val code        = "UNKNOWN_MRN"
+    override val description = "MRN not found"
+  }
+
+  case object MessageOutOfSequence extends UnifiedErrorCode {
+    override val code        = "MESSAGE_OUT_OF_SEQUENCE"
+    override val description = "There is a problem with the service"
+  }
+
+  case object InvalidMrn extends UnifiedErrorCode {
+    override val code        = "INVALID_MRN"
+    override val description = "MRN is not valid"
+  }
+
+  case object InvalidDiscrepancies extends UnifiedErrorCode {
+    override val code        = "INVALID_DISCREPANCIES"
+    override val description = "Discrepancies mismatch"
+  }
+
+  case object InvalidAmendment extends UnifiedErrorCode {
+    override val code        = "INVALID_AMENDMENT"
+    override val description = "Invalid amendment"
+  }
+
+  case object DiversionRejectedInvalidDeclaration extends UnifiedErrorCode {
+    override val code        = "DIVERSION_REJECTED_INVALID_DECLARATION"
+    override val description = "Invalid declaration"
+  }
+
+  case object DiversionRejectedUnknownMrn extends UnifiedErrorCode {
+    override val code        = "DIVERSION_REJECTED_UNKNOWN_MRN"
+    override val description = "Unknown MRN"
+  }
+
+  case object DiversionRejectedAlreadyExited extends UnifiedErrorCode {
+    override val code        = "DIVERSION_REJECTED_ALREADY_EXITED"
+    override val description = "Already exited"
+  }
+
+  case object DiversionRejectedOther extends UnifiedErrorCode {
+    override val code        = "DIVERSION_REJECTED_OTHER"
+    override val description = "Diversion rejected other"
+  }
+//-----
+
+  case object MissingField extends UnifiedErrorCode {
+    override val code        = "MISSING_FIELD"
+    override val description = "Missing field"
+  }
+
+  case object Unknown extends UnifiedErrorCode {
+    override val code        = "UNKNOWN_ERROR"
+    override val description = "Something went wrong"
+  }
+
+final case class UnifiedErrorMetadata(
+  unifiedCode:   UnifiedErrorCode,
+  path:          Option[String],
+  description:   String,
+  originalValue: Option[String]
+)
