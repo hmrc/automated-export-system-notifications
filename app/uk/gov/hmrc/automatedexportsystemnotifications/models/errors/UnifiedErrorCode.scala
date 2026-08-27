@@ -123,7 +123,6 @@ object UnifiedErrorCode:
     override val description = "Diversion rejected other"
   }
 
-
   case object MissingField extends UnifiedErrorCode {
     override val code        = "MISSING_FIELD"
     override val description = "Missing field"

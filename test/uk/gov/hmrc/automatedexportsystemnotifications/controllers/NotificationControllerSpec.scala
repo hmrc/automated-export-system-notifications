@@ -125,7 +125,7 @@ class NotificationControllerSpec extends BaseSpec {
           |    <messageRecipient>GB123456789000</messageRecipient>
           |  </Header>
           |  <Body>
-          |    <messageCode>CC906C</messageCode>
+          |    <messageCode>CD906C</messageCode>
           |    <MRN>26GB123456789ABCDEB0</MRN>
           |
           |    <FunctionalError>

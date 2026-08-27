@@ -59,7 +59,7 @@ class EisPayloadXmlParserSpec extends BaseSpec {
           |        <messageRecipient>GB123456789000</messageRecipient>
           |  </Header>
           |  <Body>
-          |     <messageCode>CC906C</messageCode>
+          |     <messageCode>CD906C</messageCode>
           |      <MRN>MRN506</MRN>
           |      <FunctionalError>
           |          <errorPointer>ptr-1</errorPointer>
@@ -80,7 +80,7 @@ class EisPayloadXmlParserSpec extends BaseSpec {
       result shouldBe Right(
         IncomingPayload.IE906(
           IE906Body(
-            MessageCode = "CC906C",
+            MessageCode = "CD906C",
             MRN = "MRN506",
             eori = "GB123456789000",
             FunctionalError = List(
