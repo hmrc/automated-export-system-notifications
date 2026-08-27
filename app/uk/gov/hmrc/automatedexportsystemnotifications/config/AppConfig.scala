@@ -26,9 +26,9 @@ class AppConfig @Inject() (config: Configuration):
   val eisToken:    String = config.getOptional[String]("microservice.services.eis-response.bearer-token").getOrElse("")
   val aesToken:    String = config.getOptional[String]("microservice.services.aes.bearer-token").getOrElse("")
   val aesEndPoint: String = config.get[String]("microservice.services.aes.protocol") +
-    config.get[String]("microservice.services.aes.host") +
+    "://" + config.get[String]("microservice.services.aes.host") +
     ":" + config.get[String]("microservice.services.aes.port") +
-    "/automated-export-system/notifications"
+    "/automated-export-system/notification"
 
   // TODO: Delete when the back end endpoint is created.
   val stubSubmissionResponse: Boolean = true

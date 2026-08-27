@@ -20,16 +20,9 @@ sealed trait UnifiedErrorCode {
   def code:        String
   def description: String
 }
-/*
-    26
-    50
-    51
-    52
-    92
-    94
-    95
- */
+
 object UnifiedErrorCode:
+  private val technicalError = "There is a problem with the service"
   case object InvalidFormatDucr extends UnifiedErrorCode {
     override val code        = "INVALID_FORMAT_DUCR"
     override val description = "Enter the DUCR in the correct format"
@@ -37,32 +30,32 @@ object UnifiedErrorCode:
 
   case object CodelistViolation extends UnifiedErrorCode {
     override val code        = "CODELIST_VIOLATION"
-    override val description = "There is a problem with the service"
+    override val description = technicalError
   }
 
   case object MissingConditionViolation extends UnifiedErrorCode {
     override val code        = "CONDITION_VIOLATION_MISSING"
-    override val description = "There is a problem with the service"
+    override val description = technicalError
   }
 
   case object RuleViolation extends UnifiedErrorCode {
     override val code        = "RULE_VIOLATION"
-    override val description = "There is a problem with the service"
+    override val description = technicalError
   }
 
   case object ConditionNotAllowedViolation extends UnifiedErrorCode {
     override val code        = "CONDITION_VIOLATION_NOT_ALLOWED"
-    override val description = "There is a problem with the service"
+    override val description = technicalError
   }
 
   case object DuplicatedMessageId extends UnifiedErrorCode {
     override val code        = "DUPLICATED_MESSAGE_ID"
-    override val description = "There is a problem with the service"
+    override val description = technicalError
   }
 
   case object RoleBaseAuthFailed extends UnifiedErrorCode {
     override val code        = "ROLEBASED_AUTH_FAILED"
-    override val description = "There is a problem with the service"
+    override val description = technicalError
   }
 
   case object MucrShut extends UnifiedErrorCode {
@@ -72,17 +65,17 @@ object UnifiedErrorCode:
 
   case object TransitionalConstraintViolation extends UnifiedErrorCode {
     override val code        = "TRANSITIONAL_CONSTRAINT_VIOLATION"
-    override val description = "There is a problem with the service"
+    override val description = technicalError
   }
 
   case object EDIViolation extends UnifiedErrorCode {
     override val code        = "EDI_VIOLATION_POST_DOWNGRADE"
-    override val description = "There is a problem with the service"
+    override val description = technicalError
   }
 
   case object FunctionalViolation extends UnifiedErrorCode {
     override val code        = "FUNCTIONAL_VIOLATION_POST_DOWNGRADE"
-    override val description = "There is a problem with the service"
+    override val description = technicalError
   }
 
   case object UnknownMrn extends UnifiedErrorCode {
@@ -92,7 +85,7 @@ object UnifiedErrorCode:
 
   case object MessageOutOfSequence extends UnifiedErrorCode {
     override val code        = "MESSAGE_OUT_OF_SEQUENCE"
-    override val description = "There is a problem with the service"
+    override val description = technicalError
   }
 
   case object InvalidMrn extends UnifiedErrorCode {
@@ -129,7 +122,7 @@ object UnifiedErrorCode:
     override val code        = "DIVERSION_REJECTED_OTHER"
     override val description = "Diversion rejected other"
   }
-//-----
+
 
   case object MissingField extends UnifiedErrorCode {
     override val code        = "MISSING_FIELD"

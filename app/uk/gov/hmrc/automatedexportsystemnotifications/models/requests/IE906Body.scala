@@ -17,7 +17,7 @@
 package uk.gov.hmrc.automatedexportsystemnotifications.models.requests
 
 case class IE906Body(
-  MessageCode:     String = "CC906C",
+  MessageCode:     String = "CD906C",
   MRN:             String,
   eori:            String,
   FunctionalError: List[FunctionalError]

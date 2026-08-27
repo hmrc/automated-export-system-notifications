@@ -32,7 +32,7 @@ object EisPayloadXmlParser:
       messageCode <- Helpers.requiredText(body, "messageCode")
       payload     <- messageCode match {
                    case "CC507C" => parseAck(xml, body).map(IncomingPayload.Ack.apply)
-                   case "CC906C" => parseIE906(xml, body).map(IncomingPayload.IE906.apply)
+                   case "CD906C" => parseIE906(xml, body).map(IncomingPayload.IE906.apply)
                    case "CD917C" => parseIE917(xml, body).map(IncomingPayload.IE917.apply)
                    case other    => Left(s"Unsupported messageCode: $other")
                  }
