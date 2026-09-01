@@ -89,16 +89,21 @@ class NotificationControllerSpec extends BaseSpec {
       val controller = new NotificationController(cc, validatedRequestAction, mockService, fixedClock)
 
       val xml =
-        """<AESDigitalNotification xmlns="http://www.hmrc.gsi.gov.uk/eis">
-          |  <Header>
+        """<?xml version="1.0" encoding="UTF-8"?>
+          |<AESDigitalNotification xmlns="http://www.hmrc.gsi.gov.uk/eis">
+          | <Header>
           |    <messageSender>NECA.XI</messageSender>
           |    <messageRecipient>GB123456789000</messageRecipient>
-          |  </Header>
-          |  <Body>
+          |    <preparationDateTime>2026-07-21T10:00:00</preparationDateTime>
+          |    <messageIdentification>f50929c4-39f5-4f33-8172-77a22588d</messageIdentification>
+          |    <messageType>ACK</messageType>
+          |    <correlationIdentifier>f50929c4-39f5-4f33-8172-77a22588d</correlationIdentifier>
+          | </Header>
+          | <Body>
           |    <messageCode>CC507C</messageCode>
           |    <actionCode>1</actionCode>
-          |    <MRN>MRN123</MRN>
-          |  </Body>
+          |    <MRN>26GB123456789ABCDE1</MRN>
+          | </Body>
           |</AESDigitalNotification>""".stripMargin
 
       val request =
@@ -120,26 +125,30 @@ class NotificationControllerSpec extends BaseSpec {
 
     "return 204 when parse succeeds with multiple IE906 FunctionalErrors and service returns success" in new Setup {
       val xml =
-        """<AESDigitalNotification>
-          |  <Header>
+        """<AESDigitalNotification xmlns="http://www.hmrc.gsi.gov.uk/eis">
+          |<Header>
+          |    <messageSender>NECA.XI</messageSender>
           |    <messageRecipient>GB123456789000</messageRecipient>
-          |  </Header>
-          |  <Body>
-          |    <messageCode>CD906C</messageCode>
-          |    <MRN>26GB123456789ABCDEB0</MRN>
-          |
+          |    <preparationDateTime>2026-07-21T10:00:00</preparationDateTime>
+          |    <messageIdentification>f50929c4-39f5-4f33-8172-77a22588d</messageIdentification>
+          |    <messageType>CD906C</messageType>
+          |    <correlationIdentifier>f50929c4-39f5-4f33-8172-77a22588d</correlationIdentifier>
+          |</Header>
+          |<Body>
+          |    <messageCode>CC507C</messageCode>
+          |    <MRN>26GB123456789ABCDE1</MRN>
           |    <FunctionalError>
           |      <errorPointer>Body.ExportOperation.MRN</errorPointer>
           |      <errorCode>90</errorCode>
           |      <errorReason>reason-1</errorReason>
-          |      <originalAttribute>26GB123</originalAttribute>
+          |      <originalAttributeValue>26GB123</originalAttributeValue>
           |    </FunctionalError>
           |
           |    <FunctionalError>
           |      <errorPointer> Body.GoodsShipment.Consignment.ReferenceNumberUCRID </errorPointer>
           |      <errorCode>96</errorCode>
           |      <errorReason>reason-2</errorReason>
-          |      <originalAttribute>DUCR001</originalAttribute>
+          |      <originalAttributeValue>DUCR001</originalAttributeValue>
           |    </FunctionalError>
           |
           |    <FunctionalError>
@@ -217,16 +226,21 @@ class NotificationControllerSpec extends BaseSpec {
       val controller = new NotificationController(cc, validatedRequestAction, mockService, fixedClock)
 
       val xml =
-        """<AESDigitalNotification xmlns="http://www.hmrc.gsi.gov.uk/eis">
-          |  <Header>
+        """<?xml version="1.0" encoding="UTF-8"?>
+          |<AESDigitalNotification xmlns="http://www.hmrc.gsi.gov.uk/eis">
+          | <Header>
           |    <messageSender>NECA.XI</messageSender>
           |    <messageRecipient>GB123456789000</messageRecipient>
-          |  </Header>
-          |  <Body>
+          |    <preparationDateTime>2026-07-21T10:00:00</preparationDateTime>
+          |    <messageIdentification>f50929c4-39f5-4f33-8172-77a22588d</messageIdentification>
+          |    <messageType>ACK</messageType>
+          |    <correlationIdentifier>f50929c4-39f5-4f33-8172-77a22588d</correlationIdentifier>
+          | </Header>
+          | <Body>
           |    <messageCode>CC507C</messageCode>
           |    <actionCode>1</actionCode>
-          |    <MRN>MRN123</MRN>
-          |  </Body>
+          |    <MRN>26GB123456789ABCDE1</MRN>
+          | </Body>
           |</AESDigitalNotification>""".stripMargin
 
       val request =

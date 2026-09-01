@@ -16,82 +16,82 @@
 
 package uk.gov.hmrc.automatedexportsystemnotifications.parsers
 
+import play.api.Logging
 import uk.gov.hmrc.automatedexportsystemnotifications.models.requests.*
 
 import scala.util.Try
 import scala.xml.{Elem, Node, NodeSeq}
 
-object EisPayloadXmlParser:
+object EisPayloadXmlParser extends Logging:
 
   def parse(xmlString: String): Either[String, IncomingPayload] =
     Try(scala.xml.XML.loadString(xmlString)).toEither.left.map(_.getMessage).flatMap(parse)
 
   def parse(xml: Elem): Either[String, IncomingPayload] =
-    for {
-      body        <- XmlNav.requiredNode(xml, "Body")
-      messageCode <- Helpers.requiredText(body, "messageCode")
-      payload     <- messageCode match {
-                   case "CC507C" => parseAck(xml, body).map(IncomingPayload.Ack.apply)
+    for
+      header      <- Helpers.requiredNode(xml, "Header")
+      body        <- Helpers.requiredNode(xml, "Body")
+      messageType <- Helpers.requiredText(header, "messageType")
+
+      payload <- messageType match
+                   case "ACK"    => parseAck(xml, body).map(IncomingPayload.Ack.apply)
                    case "CD906C" => parseIE906(xml, body).map(IncomingPayload.IE906.apply)
                    case "CD917C" => parseIE917(xml, body).map(IncomingPayload.IE917.apply)
-                   case other    => Left(s"Unsupported messageCode: $other")
-                 }
-    } yield payload
+                   case other    => Left(s"Unsupported messageType: $other")
+    yield payload
 
-  private def parseAck(root: Node, xml: Node): Either[String, AckBody] =
-    for {
-      actionCode <- Helpers.requiredInt(xml, "actionCode")
-      mrn        <- Helpers.requiredText(xml, "MRN")
-      header     <- XmlNav.requiredNode(root, "Header")
-      eori       <- XmlNav.requiredText(header, "messageRecipient")
-    } yield AckBody(ActionCode = actionCode, MRN = mrn, eori = eori)
+  def parseAck(root: Node, body: Node): Either[String, AckBody] =
+    for
+      actionCode <- Helpers.requiredInt(body, "actionCode")
+      mrn        <- Helpers.requiredText(body, "MRN")
+      header     <- Helpers.requiredNode(root, "Header")
+      eori       <- Helpers.requiredText(header, "messageRecipient")
+    yield AckBody(ActionCode = actionCode, MRN = mrn, eori = eori)
 
-  private def parseIE906(root: Node, xml: Node): Either[String, IE906Body] =
-    for {
-      mrn    <- Helpers.requiredText(xml, "MRN")
-      header <- XmlNav.requiredNode(root, "Header")
-      eori   <- XmlNav.requiredText(header, "messageRecipient")
-      errors <- parseFunctionalErrors(xml \ "FunctionalError")
-    } yield IE906Body(MRN = mrn, eori = eori, FunctionalError = errors)
+  private def parseIE906(root: Node, body: Node): Either[String, IE906Body] =
+    for
+      mrn    <- Helpers.requiredText(body, "MRN")
+      header <- Helpers.requiredNode(root, "Header")
+      eori   <- Helpers.requiredText(header, "messageRecipient")
+      errors <- parseFunctionalErrors(body.child.collect { case n: Node if n.label == "FunctionalError" => n })
+    yield IE906Body(MRN = mrn, eori = eori, FunctionalError = errors)
 
-  private def parseIE917(root: Node, xml: Node): Either[String, IE917Body] =
-    for {
-      mrn    <- Helpers.requiredText(xml, "MRN")
-      header <- XmlNav.requiredNode(root, "Header")
-      eori   <- XmlNav.requiredText(header, "messageRecipient")
-      errors <- parseXmlErrors(xml \ "XMLError")
-    } yield IE917Body(MRN = mrn, eori = eori, XmlError = errors)
+  private def parseIE917(root: Node, body: Node): Either[String, IE917Body] =
+    for
+      mrn    <- Helpers.requiredText(body, "MRN")
+      header <- Helpers.requiredNode(root, "Header")
+      eori   <- Helpers.requiredText(header, "messageRecipient")
+      errors <- parseXmlErrors(body.child.collect { case n: Node if n.label == "XMLError" => n })
+    yield IE917Body(MRN = mrn, eori = eori, XmlError = errors)
 
-  private def parseFunctionalErrors(nodes: NodeSeq): Either[String, List[FunctionalError]] = {
-    val parsed = nodes.map { n =>
-      for {
-        pointer <- Helpers.requiredText(n, "errorPointer")
-        code    <- Helpers.requiredInt(n, "errorCode")
-        reason  <- Helpers.requiredText(n, "errorReason")
-      } yield FunctionalError(
-        errorPointer = pointer,
-        errorCode = code,
-        errorReason = reason,
-        originalAttribute = Helpers.optionalText(n, "originalAttribute")
-      )
-    }.toList
+  private def parseFunctionalErrors(nodes: Seq[Node]): Either[String, List[FunctionalError]] =
+    Helpers.sequence(
+      nodes.toList.map { n =>
+        for
+          pointer <- Helpers.requiredText(n, "errorPointer")
+          code    <- Helpers.requiredInt(n, "errorCode")
+          reason  <- Helpers.requiredText(n, "errorReason")
+        yield FunctionalError(
+          errorPointer = pointer,
+          errorCode = code,
+          errorReason = reason,
+          originalAttribute = Helpers.optionalText(n, "originalAttributeValue")
+        )
+      }
+    )
 
-    Helpers.sequence(parsed)
-  }
-
-  private def parseXmlErrors(nodes: NodeSeq): Either[String, List[XMLError]] = {
-    val parsed = nodes.map { n =>
-      for {
-        pointer <- Helpers.requiredText(n, "errorPointer")
-        code    <- Helpers.requiredInt(n, "errorCode")
-        text    <- Helpers.requiredText(n, "errorText")
-      } yield XMLError(
-        errorPointer = pointer,
-        errorCode = code,
-        errorText = text,
-        originalAttribute = Helpers.optionalText(n, "originalAttribute")
-      )
-    }.toList
-
-    Helpers.sequence(parsed)
-  }
+  private def parseXmlErrors(nodes: Seq[Node]): Either[String, List[XMLError]] =
+    Helpers.sequence(
+      nodes.toList.map { n =>
+        for
+          pointer <- Helpers.requiredText(n, "errorPointer")
+          code    <- Helpers.requiredInt(n, "errorCode")
+          text    <- Helpers.requiredText(n, "errorText")
+        yield XMLError(
+          errorPointer = pointer,
+          errorCode = code,
+          errorText = text,
+          originalAttribute = Helpers.optionalText(n, "originalAttributeValue")
+        )
+      }
+    )

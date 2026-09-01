@@ -90,14 +90,6 @@ class NotificationController @Inject() (
     val now           = OffsetDateTime.now(clock)
 
     in match {
-      case IncomingPayload.Ack(a) =>
-        val status = a.ActionCode match {
-          case AckBody.ActionCodes.ACKNOWLEDGED_AND_PROCESSED => NotificationStatus.Accepted
-          case AckBody.ActionCodes.DIVERSION                  => NotificationStatus.Diversion
-          case _                                              => NotificationStatus.Rejected
-        }
-        NotificationPayload(correlationId, a.eori, a.MRN, now, status, None)
-
       case IncomingPayload.IE906(b) =>
         val payload = NotificationPayload(
           correlationId = correlationId,
@@ -140,6 +132,15 @@ class NotificationController @Inject() (
             .mkString(",")
         logger.warn(s"Notification errors from EORI ${b.eori}, MRN ${b.MRN} with correlationId $correlationId:  $unifiedCodes")
         payload
+
+      case IncomingPayload.Ack(a) =>
+        val status = a.ActionCode match {
+          case AckBody.ActionCodes.ACKNOWLEDGED_AND_PROCESSED => NotificationStatus.Accepted
+          case AckBody.ActionCodes.DIVERSION                  => NotificationStatus.Diversion
+          case _                                              => NotificationStatus.Rejected
+        }
+        NotificationPayload(correlationId, a.eori, a.MRN, now, status, None)
+
     }
   }
 
