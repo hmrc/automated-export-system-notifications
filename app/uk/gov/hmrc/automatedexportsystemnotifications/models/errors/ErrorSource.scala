@@ -14,23 +14,10 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.automatedexportsystemnotifications.parsers
+package uk.gov.hmrc.automatedexportsystemnotifications.models.errors
 
-import scala.xml.Node
+sealed trait ErrorSource
 
-object XmlNav {
-
-  def child(node: Node, local: String): Option[Node] =
-    node.child.collectFirst {
-      case n if n.label == local => n
-    }
-
-  def requiredNode(node: Node, local: String): Either[String, Node] =
-    child(node, local).toRight(s"Missing required element: $local")
-
-  def requiredText(node: Node, local: String): Either[String, String] =
-    child(node, local)
-      .map(_.text.trim)
-      .filter(_.nonEmpty)
-      .toRight(s"Missing required field: $local")
-}
+object ErrorSource:
+  case object IE906 extends ErrorSource
+  case object IE917 extends ErrorSource

@@ -20,5 +20,5 @@ case class IE917Body(
   MessageCode: String = "CD917C",
   MRN:         String,
   eori:        String,
-  XmlError:    List[XmlError]
+  XmlError:    List[XMLError]
 )

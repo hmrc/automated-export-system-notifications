@@ -17,7 +17,8 @@
 package uk.gov.hmrc.automatedexportsystemnotifications.models.aesRequest
 
 case class NotificationError(
-  code:        String,
-  description: Option[String],
-  path:        Option[String]
+  code:          String,
+  description:   Option[String],
+  path:          Option[String],
+  originalValue: Option[String]
 )

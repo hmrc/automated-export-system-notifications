@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.automatedexportsystemnotifications.models.requests
 
-case class XmlError(
+case class XMLError(
   errorPointer:      String,
   errorCode:         Int,
   errorText:         String,

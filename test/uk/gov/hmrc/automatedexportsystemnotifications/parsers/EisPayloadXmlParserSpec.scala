@@ -17,7 +17,7 @@
 package uk.gov.hmrc.automatedexportsystemnotifications.parsers
 
 import uk.gov.hmrc.automatedexportsystemnotifications.helpers.BaseSpec
-import uk.gov.hmrc.automatedexportsystemnotifications.models.requests.{AckBody, FunctionalError, IE906Body, IE917Body, IncomingPayload, XmlError}
+import uk.gov.hmrc.automatedexportsystemnotifications.models.requests.{AckBody, FunctionalError, IE906Body, IE917Body, IncomingPayload, XMLError}
 
 class EisPayloadXmlParserSpec extends BaseSpec {
 
@@ -29,12 +29,16 @@ class EisPayloadXmlParserSpec extends BaseSpec {
           |    <Header>
           |        <messageSender>NECA.XI</messageSender>
           |        <messageRecipient>GB123456789000</messageRecipient>
-          |     </Header>
-          |     <Body>
-          |         <messageCode>CC507C</messageCode>
-          |         <actionCode>1</actionCode>
-          |         <MRN>MRN123</MRN>
-          |     </Body>
+          |        <preparationDateTime>2026-07-21T10:00:00</preparationDateTime>
+          |        <messageIdentification>f50929c4-39f5-4f33-8172-77a22588d</messageIdentification>
+          |        <messageType>ACK</messageType>
+          |        <correlationIdentifier>f50929c4-39f5-4f33-8172-77a22588d</correlationIdentifier>
+          |    </Header>
+          |  <Body>
+          |        <messageCode>CC507C</messageCode>
+          |        <actionCode>1</actionCode>
+          |        <MRN>26GB123456789ABCDE1</MRN>
+          |  </Body>
           |</AESDigitalNotification>""".stripMargin
 
       val result = EisPayloadXmlParser.parse(xml)
@@ -44,7 +48,7 @@ class EisPayloadXmlParserSpec extends BaseSpec {
           AckBody(
             MessageCode = "CC507C",
             ActionCode = 1,
-            MRN = "MRN123",
+            MRN = "26GB123456789ABCDE1",
             eori = "GB123456789000"
           )
         )
@@ -53,19 +57,24 @@ class EisPayloadXmlParserSpec extends BaseSpec {
 
     "parse IE506Body payload (CC906C) with multiple FunctionalError entries" in {
       val xml =
-        """<AESDigitalNotification xmlns="http://www.hmrc.gsi.gov.uk/eis">
-          |  <Header>
+        """<?xml version="1.0" encoding="UTF-8"?>
+          |<AESDigitalNotification xmlns="http://www.hmrc.gsi.gov.uk/eis">
+          |    <Header>
           |        <messageSender>NECA.XI</messageSender>
           |        <messageRecipient>GB123456789000</messageRecipient>
-          |  </Header>
-          |  <Body>
-          |     <messageCode>CC906C</messageCode>
-          |      <MRN>MRN506</MRN>
-          |      <FunctionalError>
-          |          <errorPointer>ptr-1</errorPointer>
-          |          <errorCode>100</errorCode>
-          |          <errorReason>reason-1</errorReason>
-          |          <originalAttribute>attr-1</originalAttribute>
+          |        <preparationDateTime>2026-07-21T10:00:00</preparationDateTime>
+          |        <messageIdentification>f50929c4-39f5-4f33-8172-77a22588d</messageIdentification>
+          |        <messageType>CD906C</messageType>
+          |        <correlationIdentifier>f50929c4-39f5-4f33-8172-77a22588d</correlationIdentifier>
+          |    </Header>
+          |    <Body>
+          |        <messageCode>CC507C</messageCode>
+          |        <MRN>26GB123456789ABCDE1</MRN>
+          |        <FunctionalError>
+          |           <errorPointer>ptr-1</errorPointer>
+          |           <errorCode>100</errorCode>
+          |           <errorReason>reason-1</errorReason>
+          |           <originalAttributeValue>attr-1</originalAttributeValue>
           |       </FunctionalError>
           |       <FunctionalError>
           |           <errorPointer>ptr-2</errorPointer>
@@ -80,8 +89,8 @@ class EisPayloadXmlParserSpec extends BaseSpec {
       result shouldBe Right(
         IncomingPayload.IE906(
           IE906Body(
-            MessageCode = "CC906C",
-            MRN = "MRN506",
+            MessageCode = "CD906C",
+            MRN = "26GB123456789ABCDE1",
             eori = "GB123456789000",
             FunctionalError = List(
               FunctionalError("ptr-1", 100, "reason-1", Some("attr-1")),
@@ -94,25 +103,30 @@ class EisPayloadXmlParserSpec extends BaseSpec {
 
     "parse IE917Body payload (CD917C) with multiple XmlError entries" in {
       val xml =
-        """<AESDigitalNotification xmlns="http://www.hmrc.gsi.gov.uk/eis">
-          |  <Header>
+        """<?xml version="1.0" encoding="UTF-8"?>
+          |<AESDigitalNotification xmlns="http://www.hmrc.gsi.gov.uk/eis">
+          |    <Header>
           |        <messageSender>NECA.XI</messageSender>
           |        <messageRecipient>GB123456789000</messageRecipient>
-          |  </Header>
-          |  <Body>
-          |  <messageCode>CD917C</messageCode>
-          |  <MRN>MRN917</MRN>
-          |  <XmlError>
-          |    <errorPointer>xptr-1</errorPointer>
-          |    <errorCode>300</errorCode>
-          |    <errorText>ERRTXT1</errorText>
-          |    <originalAttribute>orig-1</originalAttribute>
-          |  </XmlError>
-          |  <XmlError>
-          |    <errorPointer>xptr-2</errorPointer>
-          |    <errorCode>301</errorCode>
-          |    <errorText>ERRTXT2</errorText>
-          |  </XmlError>
+          |        <preparationDateTime>2026-07-21T10:00:00</preparationDateTime>
+          |        <messageIdentification>f50929c4-39f5-4f33-8172-77a22588d2</messageIdentification>
+          |        <messageType>CD917C</messageType>
+          |        <correlationIdentifier>f50929c4-39f5-4f33-8172-77a22588d3</correlationIdentifier>
+          |    </Header>
+          |
+          |    <Body>
+          |        <MRN>26GB123456789ABCDE1</MRN>
+          |            <XMLError>
+          |            <errorPointer>xptr-1</errorPointer>
+          |            <errorCode>300</errorCode>
+          |            <errorText>ERRTXT1</errorText>
+          |            <originalAttributeValue>orig-1</originalAttributeValue>
+          |          </XMLError>
+          |          <XMLError>
+          |            <errorPointer>xptr-2</errorPointer>
+          |            <errorCode>301</errorCode>
+          |            <errorText>ERRTXT2</errorText>
+          |          </XMLError>
           |  </Body>
           |</AESDigitalNotification>""".stripMargin
 
@@ -122,36 +136,38 @@ class EisPayloadXmlParserSpec extends BaseSpec {
         IncomingPayload.IE917(
           IE917Body(
             MessageCode = "CD917C",
-            MRN = "MRN917",
+            MRN = "26GB123456789ABCDE1",
             eori = "GB123456789000",
             XmlError = List(
-              XmlError("xptr-1", 300, "ERRTXT1", Some("orig-1")),
-              XmlError("xptr-2", 301, "ERRTXT2", None)
+              XMLError("xptr-1", 300, "ERRTXT1", Some("orig-1")),
+              XMLError("xptr-2", 301, "ERRTXT2", None)
             )
           )
         )
       )
     }
 
-    "return Left for unsupported MessageCode" in {
+    "return Left for unsupported MessageType" in {
       val xml =
         """<AESDigitalNotification xmlns="http://www.hmrc.gsi.gov.uk/eis">
           |  <Header>
           |        <messageSender>NECA.XI</messageSender>
           |        <messageRecipient>GB123456789000</messageRecipient>
+          |        <messageType>UNKNOWN</messageType>
           |  </Header>
           |  <Body>
-          |  <messageCode>UNKNOWN</messageCode>
-          |  <MRN>MRN000</MRN>
+          |   <actionCode>1</actionCode>
+          |   <messageCode>UNKNOWN</messageCode>
+          |   <MRN>MRN000</MRN>
           |</Body>
           |</AESDigitalNotification>""".stripMargin
 
       val result = EisPayloadXmlParser.parse(xml)
 
-      result shouldBe Left("Unsupported messageCode: UNKNOWN")
+      result shouldBe Left("Unsupported messageType: UNKNOWN")
     }
 
-    "return Left when required MessageCode is missing" in {
+    "return Left when required MessageType is missing" in {
       val xml =
         """<AESDigitalNotification xmlns="http://www.hmrc.gsi.gov.uk/eis">
           |  <Header>
@@ -159,13 +175,14 @@ class EisPayloadXmlParserSpec extends BaseSpec {
           |        <messageRecipient>GB123456789000</messageRecipient>
           |  </Header>
           |  <Body>
-          |  <MRN>MRN000</MRN>
+          |    <MRN>MRN000</MRN>
+          |    <actionCode>1</actionCode>
           |</Body>
           |</AESDigitalNotification>""".stripMargin
 
       val result = EisPayloadXmlParser.parse(xml)
 
-      result shouldBe Left("Missing required field: messageCode")
+      result shouldBe Left("Missing required field: messageType")
     }
 
     "return Left when ActionCode is not an integer for CC507C" in {
@@ -174,6 +191,7 @@ class EisPayloadXmlParserSpec extends BaseSpec {
           |  <Header>
           |        <messageSender>NECA.XI</messageSender>
           |        <messageRecipient>GB123456789000</messageRecipient>
+          |        <messageType>ACK</messageType>
           |  </Header>
           |  <Body>
           |     <messageCode>CC507C</messageCode>

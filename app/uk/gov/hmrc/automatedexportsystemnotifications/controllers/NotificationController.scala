@@ -21,6 +21,7 @@ import play.api.mvc.*
 import uk.gov.hmrc.automatedexportsystemnotifications.controllers.actions.ValidatedRequestAction
 import uk.gov.hmrc.automatedexportsystemnotifications.models.*
 import uk.gov.hmrc.automatedexportsystemnotifications.models.aesRequest.{NotificationError, NotificationPayload, NotificationStatus}
+import uk.gov.hmrc.automatedexportsystemnotifications.models.errors.{ErrorMapper, ErrorSource, UnifiedErrorCode}
 import uk.gov.hmrc.automatedexportsystemnotifications.models.requests.{AckBody, IncomingPayload}
 import uk.gov.hmrc.automatedexportsystemnotifications.parsers.EisPayloadXmlParser
 import uk.gov.hmrc.automatedexportsystemnotifications.services.AesService
@@ -30,6 +31,7 @@ import uk.gov.hmrc.play.http.HeaderCarrierConverter
 import java.time.{Clock, OffsetDateTime}
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
+
 @Singleton()
 class NotificationController @Inject() (
   cc:                     ControllerComponents,
@@ -38,7 +40,7 @@ class NotificationController @Inject() (
   clock:                  Clock
 )(implicit ec: ExecutionContext)
     extends AbstractController(cc)
-    with Logging {
+    with Logging:
 
   def notification: Action[AnyContent] = validatedRequestAction.async { implicit req =>
     process(req).map {
@@ -88,6 +90,49 @@ class NotificationController @Inject() (
     val now           = OffsetDateTime.now(clock)
 
     in match {
+      case IncomingPayload.IE906(b) =>
+        val payload = NotificationPayload(
+          correlationId = correlationId,
+          eori = b.eori,
+          mrn = b.MRN,
+          dateCreated = now,
+          status = NotificationStatus.Rejected,
+          errors = Some(b.FunctionalError.map: e =>
+            val unified: UnifiedErrorCode = ErrorMapper.toUnified(ErrorSource.IE906, e.errorCode)
+            NotificationError(
+              code = unified.code,
+              description = Some(unified.description),
+              path = Some(e.errorPointer),
+              originalValue = e.originalAttribute
+            ))
+        )
+        val unifiedCodes: String =
+          payload.errors
+            .getOrElse(Nil)
+            .map(_.code)
+            .distinct
+            .mkString(",")
+        logger.warn(s"Notification errors from EORI ${b.eori}, MRN ${b.MRN} with correlationId $correlationId:  $unifiedCodes")
+        payload
+
+      case IncomingPayload.IE917(b) =>
+        val payload = NotificationPayload(
+          correlationId,
+          b.eori,
+          b.MRN,
+          now,
+          NotificationStatus.Rejected,
+          Some(b.XmlError.map(e => NotificationError(e.errorCode.toString, Some(e.errorText), Some(e.errorPointer), e.originalAttribute)))
+        )
+        val unifiedCodes: String =
+          payload.errors
+            .getOrElse(Nil)
+            .map(_.code)
+            .distinct
+            .mkString(",")
+        logger.warn(s"Notification errors from EORI ${b.eori}, MRN ${b.MRN} with correlationId $correlationId:  $unifiedCodes")
+        payload
+
       case IncomingPayload.Ack(a) =>
         val status = a.ActionCode match {
           case AckBody.ActionCodes.ACKNOWLEDGED_AND_PROCESSED => NotificationStatus.Accepted
@@ -96,30 +141,6 @@ class NotificationController @Inject() (
         }
         NotificationPayload(correlationId, a.eori, a.MRN, now, status, None)
 
-      case IncomingPayload.IE906(b) =>
-        NotificationPayload(
-          correlationId = correlationId,
-          eori = b.eori,
-          mrn = b.MRN,
-          dateCreated = now,
-          status = NotificationStatus.Rejected,
-          errors = Some(b.FunctionalError.map: e =>
-            NotificationError(
-              code = e.errorCode.toString,
-              description = Some(e.errorReason),
-              path = Some(e.errorPointer)
-            ))
-        )
-
-      case IncomingPayload.IE917(b) =>
-        NotificationPayload(
-          correlationId,
-          b.eori,
-          b.MRN,
-          now,
-          NotificationStatus.Rejected,
-          Some(b.XmlError.map(e => NotificationError(e.errorCode.toString, Some(e.errorText), Some(e.errorPointer))))
-        )
     }
   }
 
@@ -129,4 +150,3 @@ class NotificationController @Inject() (
 
   private implicit def hc(implicit request: RequestHeader): HeaderCarrier =
     HeaderCarrierConverter.fromRequestAndSession(request, request.session)
-}

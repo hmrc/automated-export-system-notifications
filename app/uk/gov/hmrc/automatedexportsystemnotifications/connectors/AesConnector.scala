@@ -30,13 +30,12 @@ import scala.concurrent.{ExecutionContext, Future}
 class AesConnector @Inject() (
   appConfig: AppConfig,
   http:      HttpClientV2
-)(implicit ec: ExecutionContext) {
+)(implicit ec: ExecutionContext):
 
   private val endpoint  = appConfig.aesEndPoint
   private val authToken = appConfig.aesToken
 
-  // TODO: uncomment and rename when the backend has an endpoint.
-  /*def send(xml: String)(implicit hc: HeaderCarrier): Future[Either[String, Unit]] =
+  def send(xml: String)(implicit hc: HeaderCarrier): Future[Either[String, Unit]] =
     http
       .post(url"$endpoint")
       .setHeader(
@@ -48,23 +47,4 @@ class AesConnector @Inject() (
       .map { resp =>
         if (resp.status == 204) Right(())
         else Left(s"Expected 204, got ${resp.status}. Body: ${resp.body}")
-      }*/
-
-  def send(xml: String)(implicit hc: HeaderCarrier): Future[Either[String, Unit]] =
-    if (appConfig.stubSubmissionResponse) {
-      Future.successful(Right(())) // pretend 204
-    } else {
-      http
-        .post(url"$endpoint")
-        .setHeader(
-          "Authorization" -> authToken,
-          "Content-Type"  -> ContentTypes.XML
-        )
-        .withBody(xml)
-        .execute[HttpResponse]
-        .map { resp =>
-          if (resp.status == 204) Right(())
-          else Left(s"Expected 204, got ${resp.status}. Body: ${resp.body}")
-        }
-    }
-}
+      }

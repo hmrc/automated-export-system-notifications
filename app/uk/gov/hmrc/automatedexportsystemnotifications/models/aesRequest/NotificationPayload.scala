@@ -19,7 +19,7 @@ package uk.gov.hmrc.automatedexportsystemnotifications.models.aesRequest
 import java.time.OffsetDateTime
 
 case class NotificationPayload(
-  correlationId: String, // Note that this is 35 chars, not a UUID
+  correlationId: String,
   eori:          String,
   mrn:           String,
   dateCreated:   OffsetDateTime,

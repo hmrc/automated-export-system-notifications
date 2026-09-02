@@ -18,6 +18,7 @@ package uk.gov.hmrc.automatedexportsystemnotifications.config
 
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration
+import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 @Singleton
 class AppConfig @Inject() (config: Configuration):
@@ -25,10 +26,5 @@ class AppConfig @Inject() (config: Configuration):
   val appName:     String = config.get[String]("appName")
   val eisToken:    String = config.getOptional[String]("microservice.services.eis-response.bearer-token").getOrElse("")
   val aesToken:    String = config.getOptional[String]("microservice.services.aes.bearer-token").getOrElse("")
-  val aesEndPoint: String = config.get[String]("microservice.services.aes.protocol") +
-    config.get[String]("microservice.services.aes.host") +
-    ":" + config.get[String]("microservice.services.aes.port") +
-    "/automated-export-system/notifications"
-
-  // TODO: Delete when the back end endpoint is created.
-  val stubSubmissionResponse: Boolean = true
+  val aesEndPoint: String =
+    ServicesConfig(config).baseUrl("aes") + "/automated-export-system/notification"

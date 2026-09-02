@@ -15,11 +15,12 @@
  */
 
 package uk.gov.hmrc.automatedexportsystemnotifications.parsers
-
 import scala.util.Try
 import scala.xml.Node
 
-object Helpers {
+object Helpers:
+  val EisNs = "http://www.hmrc.gsi.gov.uk/eis"
+
   def requiredText(node: scala.xml.Node, label: String): Either[String, String] = {
     val value = (node \ label).text.trim
     if (value.nonEmpty) Right(value) else Left(s"Missing required field: $label")
@@ -47,4 +48,8 @@ object Helpers {
         t <- acc
       } yield h :: t
     }
-}
+
+  def descElems(node: Node, local: String, ns: String = EisNs): Seq[Node] =
+    (node \\ "_").collect {
+      case n: Node if n.label == local && n.namespace == ns => n
+    }
