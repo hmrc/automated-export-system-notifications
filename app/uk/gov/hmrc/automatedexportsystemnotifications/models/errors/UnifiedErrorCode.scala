@@ -123,7 +123,7 @@ object UnifiedErrorCode:
     override val description = "Diversion rejected other"
   }
 
-  case object IncorrectEnumaration extends UnifiedErrorCode {
+  case object IncorrectEnumeration extends UnifiedErrorCode {
     override val code        = "INCORRECT_ENUMERATION"
     override val description = "A field contains a value that is not permitted from the allowed list."
   }

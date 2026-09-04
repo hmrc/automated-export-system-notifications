@@ -44,7 +44,7 @@ object ErrorMapper:
   )
 
   private val ie917Map: Map[Int, UnifiedErrorCode] = Map(
-    12 -> IncorrectEnumaration,
+    12 -> IncorrectEnumeration,
     13 -> MissingField,
     15 -> NotSupportedInPosition,
     18 -> UnspecifiedErrorOther,
