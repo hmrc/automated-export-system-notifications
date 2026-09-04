@@ -123,9 +123,79 @@ object UnifiedErrorCode:
     override val description = "Diversion rejected other"
   }
 
+  case object IncorrectEnumaration extends UnifiedErrorCode {
+    override val code        = "INCORRECT_ENUMERATION"
+    override val description = "A field contains a value that is not permitted from the allowed list."
+  }
+
   case object MissingField extends UnifiedErrorCode {
-    override val code        = "MISSING_FIELD"
-    override val description = "Missing field"
+    override val code        = "MISSING"
+    override val description = "A mandatory field has not been provided."
+  }
+
+  case object NotSupportedInPosition extends UnifiedErrorCode {
+    override val code        = "NOT_SUPPORTED_IN_POSITION"
+    override val description = "The field or value is not valid in this part of the message."
+  }
+
+  case object UnspecifiedErrorOther extends UnifiedErrorCode {
+    override val code        = "UNSPECIFIED_ERROR_OTHER"
+    override val description = "An unexpected error occurred that does not match a specific validation category."
+  }
+
+  case object TooManyRepetitions extends UnifiedErrorCode {
+    override val code        = "TOO_MANY_REPETITIONS"
+    override val description = "Too many occurrences of the same element were provided."
+  }
+
+  case object ElementTooLong extends UnifiedErrorCode {
+    override val code        = "ELEMENT_TOO_LONG"
+    override val description = "A field contains more characters than allowed."
+  }
+
+  case object ElementTooShort extends UnifiedErrorCode {
+    override val code        = "ELEMENT_TOO_SHORT"
+    override val description = "A field contains fewer characters than required."
+  }
+
+  case object InvalidValueSpecificType extends UnifiedErrorCode {
+    override val code        = "INVALID_VALUE_SPECIFICTYPE"
+    override val description = "The value provided is not valid for the expected data type."
+  }
+
+  case object InvalidValuePattern extends UnifiedErrorCode {
+    override val code        = "INVALID_VALUE_PATTERN"
+    override val description = "The value does not match the required format or pattern."
+  }
+
+  case object InvalidXmlFormat extends UnifiedErrorCode {
+    override val code        = "INVALID_XML_FORMAT"
+    override val description = "The message XML structure is invalid and cannot be processed."
+  }
+
+  case object InvalidCharacters extends UnifiedErrorCode {
+    override val code        = "INVALID_CHARACTERS"
+    override val description = "The message contains unsupported or invalid characters."
+  }
+
+  case object ValueLowerAllowedLowestLimit extends UnifiedErrorCode {
+    override val code        = "VALUE_LOWER_ALLOWED_LOWEST_LIMIT"
+    override val description = "The value is below the minimum allowed limit."
+  }
+
+  case object ValueGreaterAllowedUpperLimit extends UnifiedErrorCode {
+    override val code        = "VALUE_GREATER_ALLOWED_UPPER_LIMIT"
+    override val description = "The value exceeds the maximum allowed limit."
+  }
+
+  case object ValueLowerOrEqualAllowedLowestLimit extends UnifiedErrorCode {
+    override val code        = "VALUE_LOWER_OR_EQUAL_ALLOWED_LOWEST_LIMIT"
+    override val description = "The value must be greater than the minimum allowed limit."
+  }
+
+  case object ValueGreaterOrEqualAllowedLowestLimit extends UnifiedErrorCode {
+    override val code        = "VALUE_GREATER_OR_EQUAL_ALLOWED_LOWEST_LIMIT"
+    override val description = "The value must be less than the maximum allowed limit."
   }
 
   case object Unknown extends UnifiedErrorCode {
