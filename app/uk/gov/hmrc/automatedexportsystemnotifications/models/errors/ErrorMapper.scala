@@ -44,7 +44,21 @@ object ErrorMapper:
   )
 
   private val ie917Map: Map[Int, UnifiedErrorCode] = Map(
-    13 -> MissingField
+    12 -> IncorrectEnumeration,
+    13 -> MissingField,
+    15 -> NotSupportedInPosition,
+    18 -> UnspecifiedErrorOther,
+    35 -> TooManyRepetitions,
+    39 -> ElementTooLong,
+    40 -> ElementTooShort,
+    50 -> InvalidValueSpecificType,
+    51 -> InvalidValuePattern,
+    52 -> InvalidXmlFormat,
+    53 -> InvalidCharacters,
+    54 -> ValueLowerAllowedLowestLimit,
+    55 -> ValueGreaterAllowedUpperLimit,
+    56 -> ValueLowerOrEqualAllowedLowestLimit,
+    57 -> ValueGreaterOrEqualAllowedLowestLimit
   )
 
   def toUnified(source: ErrorSource, rawCode: Int): UnifiedErrorCode =
