@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.automatedexportsystemnotifications.controllers
 
-import org.mockito.{ArgumentCaptor, Mockito}
+import org.mockito.ArgumentMatchers
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.*
 import play.api.test.FakeRequest
@@ -29,7 +29,6 @@ import play.api.test.Helpers.stubControllerComponents
 
 import java.time.{Clock, Instant, ZoneOffset}
 import play.api.mvc.BodyParsers
-import uk.gov.hmrc.automatedexportsystemnotifications.models.errors.UnifiedErrorCode.*
 
 import scala.concurrent.Future
 
@@ -124,6 +123,8 @@ class NotificationControllerSpec extends BaseSpec {
     }
 
     "return 204 when parse succeeds with multiple IE906 FunctionalErrors and service returns success" in new Setup {
+      val controller = new NotificationController(cc, validatedRequestAction, mockService, fixedClock)
+
       val xml =
         """<AESDigitalNotification xmlns="http://www.hmrc.gsi.gov.uk/eis">
           |<Header>
@@ -169,8 +170,6 @@ class NotificationControllerSpec extends BaseSpec {
         )(any[HeaderCarrier])
       ).thenReturn(Future.successful(Right(())))
 
-      val controller = new NotificationController(cc, validatedRequestAction, mockService, fixedClock)
-
       val request =
         FakeRequest(POST, "/notifications")
           .withTextBody(xml)
@@ -180,35 +179,119 @@ class NotificationControllerSpec extends BaseSpec {
 
       status(result) shouldBe NO_CONTENT
 
-      val errorsCaptor: ArgumentCaptor[Option[List[NotificationError]]] =
-        ArgumentCaptor.forClass(classOf[Option[List[NotificationError]]])
+      when(
+        mockService.sendNotification(
+          ArgumentMatchers.eq("corr-123"),
+          ArgumentMatchers.eq("GB123456789000"),
+          ArgumentMatchers.eq("26GB123456789ABCDE1"),
+          ArgumentMatchers.eq(NotificationStatus.Rejected),
+          ArgumentMatchers.eq(
+            Some(
+              List(
+                NotificationError(
+                  code = "UNKNOWN_MRN",
+                  description = Some("MRN not found"),
+                  path = Some("Body.ExportOperation.MRN"),
+                  originalValue = Some("26GB123")
+                ),
+                NotificationError(
+                  code = "DIVERSION_REJECTED_INVALID_DECLARATION",
+                  description = Some("Invalid declaration"),
+                  path = Some("Body.GoodsShipment.Consignment.ReferenceNumberUCRID"),
+                  originalValue = Some("DUCR001")
+                ),
+                NotificationError(
+                  code = "UNKNOWN_ERROR",
+                  description = Some("Something went wrong"),
+                  path = Some("Body.Unknown.Path"),
+                  originalValue = None
+                )
+              )
+            )
+          )
+        )(any[HeaderCarrier])
+      ).thenReturn(Future.successful(Right(())))
+    }
 
-      verify(mockService, Mockito.atLeast(1)).sendNotification(
-        any(),
-        any(),
-        any(),
-        any(),
-        errorsCaptor.capture()
-      )(any())
+    "return 204 when parse succeeds with multiple IE917 XmlErrors and service returns success" in new Setup {
+      val controller = new NotificationController(cc, validatedRequestAction, mockService, fixedClock)
 
-      val sentErrors: List[NotificationError] = errorsCaptor.getValue.value
+      val xml =
+        """<AESDigitalNotification xmlns="http://www.hmrc.gsi.gov.uk/eis">
+          |<Header>
+          |    <messageSender>NECA.XI</messageSender>
+          |    <messageRecipient>GB123456789000</messageRecipient>
+          |    <preparationDateTime>2026-07-21T10:00:00</preparationDateTime>
+          |    <messageIdentification>f50929c4-39f5-4f33-8172-77a22588d</messageIdentification>
+          |    <messageType>CD917C</messageType>
+          |    <correlationIdentifier>f50929c4-39f5-4f33-8172-77a22588d</correlationIdentifier>
+          |</Header>
+          |<Body>
+          |    <messageCode>CD917C</messageCode>
+          |    <MRN>26GB123456789ABCDE1</MRN>
+          |    <XMLError>
+          |      <errorPointer>Body.ExportOperation.MRN</errorPointer>
+          |      <errorCode>13</errorCode>
+          |      <errorText>reason-1</errorText>
+          |      <originalAttributeValue>26GB123</originalAttributeValue>
+          |    </XMLError>
+          |
+          |    <XMLError>
+          |      <errorPointer>Body.GoodsShipment.Consignment.ReferenceNumberUCRID</errorPointer>
+          |      <errorCode>15</errorCode>
+          |      <errorText>reason-2</errorText>
+          |      <originalAttributeValue>DUCR001</originalAttributeValue>
+          |    </XMLError>
+          |
+          |    <XMLError>
+          |      <errorPointer>Body.Unknown.Path</errorPointer>
+          |      <errorCode>12345</errorCode>
+          |      <errorText>reason-3</errorText>
+          |    </XMLError>
+          |  </Body>
+          |</AESDigitalNotification>""".stripMargin
 
-      sentErrors should have size 3
+      val request =
+        FakeRequest(POST, "/notifications")
+          .withTextBody(xml)
+          .withHeaders("x-correlation-id" -> "corr-123", "Authorization" -> "test-token")
 
-      sentErrors(0).code          shouldBe UnknownMrn.code
-      sentErrors(0).path          shouldBe Some("Body.ExportOperation.MRN")
-      sentErrors(0).originalValue shouldBe Some("26GB123")
-      sentErrors(0).description   shouldBe Some(UnknownMrn.description)
+      when(
+        mockService.sendNotification(
+          ArgumentMatchers.eq("corr-123"),
+          ArgumentMatchers.eq("GB123456789000"),
+          ArgumentMatchers.eq("26GB123456789ABCDE1"),
+          ArgumentMatchers.eq(NotificationStatus.Rejected),
+          ArgumentMatchers.eq(
+            Some(
+              List(
+                NotificationError(
+                  code = "MISSING",
+                  description = Some("A mandatory field has not been provided."),
+                  path = Some("Body.ExportOperation.MRN"),
+                  originalValue = Some("26GB123")
+                ),
+                NotificationError(
+                  code = "NOT_SUPPORTED_IN_POSITION",
+                  description = Some("The field or value is not valid in this part of the message."),
+                  path = Some("Body.GoodsShipment.Consignment.ReferenceNumberUCRID"),
+                  originalValue = Some("DUCR001")
+                ),
+                NotificationError(
+                  code = "UNKNOWN_ERROR",
+                  description = Some("Something went wrong"),
+                  path = Some("Body.Unknown.Path"),
+                  originalValue = None
+                )
+              )
+            )
+          )
+        )(any[HeaderCarrier])
+      ).thenReturn(Future.successful(Right(())))
 
-      sentErrors(1).code          shouldBe DiversionRejectedInvalidDeclaration.code
-      sentErrors(1).path          shouldBe Some("Body.GoodsShipment.Consignment.ReferenceNumberUCRID")
-      sentErrors(1).originalValue shouldBe Some("DUCR001")
-      sentErrors(1).description   shouldBe Some(DiversionRejectedInvalidDeclaration.description)
+      val result = controller.notification(request)
 
-      sentErrors(2).code          shouldBe "UNKNOWN_ERROR"
-      sentErrors(2).path          shouldBe Some("Body.Unknown.Path")
-      sentErrors(2).originalValue shouldBe None
-      sentErrors(2).description   shouldBe Some("Something went wrong")
+      status(result) shouldBe NO_CONTENT
     }
 
     "return 502 when service returns Left" in new Setup {

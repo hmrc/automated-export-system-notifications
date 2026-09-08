@@ -122,7 +122,14 @@ class NotificationController @Inject() (
           b.MRN,
           now,
           NotificationStatus.Rejected,
-          Some(b.XmlError.map(e => NotificationError(e.errorCode.toString, Some(e.errorText), Some(e.errorPointer), e.originalAttribute)))
+          errors = Some(b.XmlError.map: e =>
+            val unified: UnifiedErrorCode = ErrorMapper.toUnified(ErrorSource.IE917, e.errorCode)
+            NotificationError(
+              code = unified.code,
+              description = Some(unified.description),
+              path = Some(e.errorPointer),
+              originalValue = e.originalAttribute
+            ))
         )
         val unifiedCodes: String =
           payload.errors

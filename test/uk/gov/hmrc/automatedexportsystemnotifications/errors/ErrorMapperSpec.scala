@@ -49,7 +49,22 @@ class ErrorMapperSpec extends BaseSpec {
     }
 
     "map IE917 known codes correctly" in {
+      ErrorMapper.toUnified(ErrorSource.IE917, 12) shouldBe IncorrectEnumeration
       ErrorMapper.toUnified(ErrorSource.IE917, 13) shouldBe MissingField
+      ErrorMapper.toUnified(ErrorSource.IE917, 15) shouldBe NotSupportedInPosition
+      ErrorMapper.toUnified(ErrorSource.IE917, 18) shouldBe UnspecifiedErrorOther
+      ErrorMapper.toUnified(ErrorSource.IE917, 35) shouldBe TooManyRepetitions
+      ErrorMapper.toUnified(ErrorSource.IE917, 39) shouldBe ElementTooLong
+      ErrorMapper.toUnified(ErrorSource.IE917, 40) shouldBe ElementTooShort
+      ErrorMapper.toUnified(ErrorSource.IE917, 50) shouldBe InvalidValueSpecificType
+      ErrorMapper.toUnified(ErrorSource.IE917, 51) shouldBe InvalidValuePattern
+      ErrorMapper.toUnified(ErrorSource.IE917, 52) shouldBe InvalidXmlFormat
+      ErrorMapper.toUnified(ErrorSource.IE917, 53) shouldBe InvalidCharacters
+      ErrorMapper.toUnified(ErrorSource.IE917, 54) shouldBe ValueLowerAllowedLowestLimit
+      ErrorMapper.toUnified(ErrorSource.IE917, 55) shouldBe ValueGreaterAllowedUpperLimit
+      ErrorMapper.toUnified(ErrorSource.IE917, 56) shouldBe ValueLowerOrEqualAllowedLowestLimit
+      ErrorMapper.toUnified(ErrorSource.IE917, 57) shouldBe ValueGreaterOrEqualAllowedLowestLimit
+
     }
 
     "return Unknown for unknown IE906 code" in {
