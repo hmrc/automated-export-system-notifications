@@ -23,19 +23,21 @@ import scala.xml.{Elem, NodeSeq}
 
 object AesNotificationWriter {
 
-  private val dtf = DateTimeFormatter.ISO_OFFSET_DATE_TIME
+  private val dtf = DateTimeFormatter.ISO_LOCAL_DATE_TIME
 
   def toXml(payload: NotificationPayload): Either[String, Elem] =
     validate(payload).map { _ =>
       <notification>
         <correlationId>{payload.correlationId.toString}</correlationId>
+        <eori>{payload.eori.toString}</eori>
+        <mrn>{payload.mrn.toString}</mrn>
         <dateCreated>{dtf.format(payload.dateCreated)}</dateCreated>
         <status>{payload.status.value.toString}</status>
         {
         payload.errors
           .filter(_.nonEmpty)
           .map: errs =>
-            <errors>{errs.map(toErrorXml)}</errors>
+            <notificationErrors>{errs.map(toErrorXml)}</notificationErrors>
           .getOrElse(NodeSeq.Empty)
       }
       </notification>
