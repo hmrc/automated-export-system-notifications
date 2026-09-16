@@ -61,7 +61,7 @@ object EisPayloadXmlParser extends Logging:
       mrn    <- Helpers.requiredText(body, "MRN")
       header <- Helpers.requiredNode(root, "Header")
       eori   <- Helpers.requiredText(header, "messageRecipient")
-      errors <- parseXmlErrors(body.child.collect { case n: Node if n.label == "XMLError" => n })
+      errors <- parseXmlErrors(body.child.collect { case n: Node if n.label == "XmlError" => n })
     yield IE917Body(MRN = mrn, eori = eori, XmlError = errors)
 
   private def parseFunctionalErrors(nodes: Seq[Node]): Either[String, List[FunctionalError]] =

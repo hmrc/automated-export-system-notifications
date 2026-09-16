@@ -229,25 +229,25 @@ class NotificationControllerSpec extends BaseSpec {
           |<Body>
           |    <messageCode>CD917C</messageCode>
           |    <MRN>26GB123456789ABCDE1</MRN>
-          |    <XMLError>
+          |    <XmlError>
           |      <errorPointer>Body.ExportOperation.MRN</errorPointer>
           |      <errorCode>13</errorCode>
           |      <errorText>reason-1</errorText>
           |      <originalAttributeValue>26GB123</originalAttributeValue>
-          |    </XMLError>
+          |    </XmlError>
           |
-          |    <XMLError>
+          |    <XmlError>
           |      <errorPointer>Body.GoodsShipment.Consignment.ReferenceNumberUCRID</errorPointer>
           |      <errorCode>15</errorCode>
           |      <errorText>reason-2</errorText>
           |      <originalAttributeValue>DUCR001</originalAttributeValue>
-          |    </XMLError>
+          |    </XmlError>
           |
-          |    <XMLError>
+          |    <XmlError>
           |      <errorPointer>Body.Unknown.Path</errorPointer>
           |      <errorCode>12345</errorCode>
           |      <errorText>reason-3</errorText>
-          |    </XMLError>
+          |    </XmlError>
           |  </Body>
           |</AESDigitalNotification>""".stripMargin
 

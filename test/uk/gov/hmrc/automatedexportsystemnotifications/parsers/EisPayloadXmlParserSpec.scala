@@ -116,17 +116,17 @@ class EisPayloadXmlParserSpec extends BaseSpec {
           |
           |    <Body>
           |        <MRN>26GB123456789ABCDE1</MRN>
-          |            <XMLError>
+          |            <XmlError>
           |            <errorPointer>xptr-1</errorPointer>
           |            <errorCode>300</errorCode>
           |            <errorText>ERRTXT1</errorText>
           |            <originalAttributeValue>orig-1</originalAttributeValue>
-          |          </XMLError>
-          |          <XMLError>
+          |          </XmlError>
+          |          <XmlError>
           |            <errorPointer>xptr-2</errorPointer>
           |            <errorCode>301</errorCode>
           |            <errorText>ERRTXT2</errorText>
-          |          </XMLError>
+          |          </XmlError>
           |  </Body>
           |</AESDigitalNotification>""".stripMargin
 
