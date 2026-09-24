@@ -58,6 +58,18 @@ class ValidatedRequestAction @Inject() (
 
           maybeXmlString match {
             case Some(xmlString) =>
+
+              val headersToLog: Seq[(String, String)] =
+                request.headers.headers.filterNot { case (name, _) =>
+                  name.equalsIgnoreCase("Authorization")
+                }
+
+              logger.debug(
+                s"Received notification from HMRC. " +
+                  s"Headers: ${headersToLog.map { case (name, value) => s"$name=$value" }.mkString(", ")}. " +
+                  s"Payload: $xmlString"
+              )
+
               val isValidXml = Try(XML.loadString(xmlString)).isSuccess
               if (!isValidXml) {
                 logger.error("Invalid XML payload received")
