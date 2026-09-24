@@ -20,6 +20,6 @@ sealed trait NotificationStatus { def value: Int }
 
 object NotificationStatus {
   case object Accepted extends NotificationStatus { val value = 1 }
-  case object Diversion extends NotificationStatus { val value = 2 }
-  case object Rejected extends NotificationStatus { val value = 5 }
+  case object Diversion extends NotificationStatus { val value = 5 }
+  case object Rejected extends NotificationStatus { val value = 2 }
 }
