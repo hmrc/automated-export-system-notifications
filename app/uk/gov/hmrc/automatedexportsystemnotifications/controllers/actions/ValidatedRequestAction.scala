@@ -29,7 +29,7 @@ case class ValidatedRequest[A](request: Request[A]) extends WrappedRequest[A](re
 
 @Singleton
 class ValidatedRequestAction @Inject() (
-  bodyParsers: BodyParsers.Default,
+  bodyParsers: PlayBodyParsers,
   appConfig:   AppConfig
 )(implicit ec: ExecutionContext)
     extends ActionBuilder[ValidatedRequest, AnyContent]
@@ -38,43 +38,77 @@ class ValidatedRequestAction @Inject() (
 
   private val expectedAuthHeader: String = appConfig.eisToken
 
-  override def parser: BodyParser[AnyContent] = bodyParsers
+  override def parser: BodyParser[AnyContent] = bodyParsers.raw.map(rawBuffer => AnyContentAsRaw(rawBuffer))
 
   override protected def executionContext: ExecutionContext = ec
 
   override def refine[A](request: Request[A]): Future[Either[Result, ValidatedRequest[A]]] = {
-    val maybeAuth = request.headers.get("Authorization")
-    if (maybeAuth.forall(_ != expectedAuthHeader)) {
-      logger.warn(s"Unauthorized request. Provided Authorization header: ${maybeAuth.getOrElse("<missing>")}")
-      Future.successful(Left(Results.Unauthorized("Invalid Authorization header")))
-    } else {
+    val headersToLog: Seq[(String, String)] =
+      request.headers.headers.filterNot { case (name, _) =>
+        name.equalsIgnoreCase("Authorization")
+      }
+
+    val maybePayload: Option[String] =
       request.body match {
         case any: AnyContent =>
-          val maybeXmlString =
-            any.asXml
-              .map(_.toString())
-              .orElse(any.asText)
-              .orElse(any.asRaw.flatMap(_.asBytes().map(_.utf8String)))
+          extractPayload(any)
 
-          maybeXmlString match {
-            case Some(xmlString) =>
-              val isValidXml = Try(XML.loadString(xmlString)).isSuccess
-              if (!isValidXml) {
-                logger.error("Invalid XML payload received")
-                Future.successful(Left(Results.BadRequest("Invalid XML payload")))
-              } else {
-                Future.successful(Right(ValidatedRequest(request)))
-              }
+        case _ =>
+          None
+      }
 
-            case None =>
-              logger.error("Missing request body")
-              Future.successful(Left(Results.BadRequest("Request body is required")))
+    logger.debug(
+      s"Received notification from HMRC. " +
+        s"Headers: ${headersToLog.map { case (name, value) => s"$name=$value" }.mkString(", ")}. " +
+        s"Payload: ${maybePayload.getOrElse("")}"
+    )
+
+    val maybeAuth: Option[String] =
+      request.headers.get("Authorization")
+
+    if (maybeAuth.forall(_ != expectedAuthHeader)) {
+      val warningMessage: String =
+        if (maybeAuth.isEmpty)
+          "Notification request rejected: missing authorization header"
+        else
+          "Notification request rejected: invalid authorization header"
+
+      logger.warn(warningMessage)
+
+      Future.successful(
+        Left(Results.Unauthorized("Invalid Authorization header"))
+      )
+    } else {
+      maybePayload match {
+        case Some(payload) if payload.nonEmpty =>
+          val isValidXml: Boolean =
+            Try(XML.loadString(payload)).isSuccess
+
+          if (!isValidXml) {
+            logger.error("Invalid XML payload received")
+
+            Future.successful(
+              Left(Results.BadRequest("Invalid XML payload"))
+            )
+          } else {
+            Future.successful(
+              Right(ValidatedRequest(request))
+            )
           }
 
         case _ =>
-          logger.error("Unsupported request body type")
-          Future.successful(Left(Results.BadRequest("Unsupported body type")))
+          logger.error("Missing request body")
+
+          Future.successful(
+            Left(Results.BadRequest("Request body is required"))
+          )
       }
     }
   }
+
+  private def extractPayload(any: AnyContent): Option[String] =
+    any.asRaw
+      .flatMap(_.asBytes().map(_.utf8String))
+      .orElse(any.asText)
+      .orElse(any.asXml.map(_.toString()))
 }

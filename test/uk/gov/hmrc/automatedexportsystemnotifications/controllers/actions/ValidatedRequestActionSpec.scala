@@ -17,18 +17,24 @@
 package uk.gov.hmrc.automatedexportsystemnotifications.controllers.actions
 
 import org.mockito.Mockito.*
-import play.api.mvc.{BodyParsers, Results}
+import play.api.mvc.Results
 import play.api.test.FakeRequest
 import play.api.test.Helpers.*
 import uk.gov.hmrc.automatedexportsystemnotifications.helpers.BaseSpec
+import ch.qos.logback.classic.{Level, Logger}
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
+import org.slf4j.LoggerFactory
+import scala.jdk.CollectionConverters.*
 
 class ValidatedRequestActionSpec extends BaseSpec {
   trait Setup {
     when(mockAppConfig.eisToken).thenReturn("test-token")
 
-    private val cc            = stubControllerComponents()
-    private val bodyParsers   = new BodyParsers.Default(cc.parsers)
-    val validateRequestAction = new ValidatedRequestAction(bodyParsers, mockAppConfig)
+    private val cc = stubControllerComponents()
+
+    val validateRequestAction =
+      new ValidatedRequestAction(cc.parsers, mockAppConfig)
   }
   "refine" - {
     "returns Unauthorized when Authorization header is missing" in new Setup {
@@ -68,6 +74,67 @@ class ValidatedRequestActionSpec extends BaseSpec {
         .withXmlBody(<root><value>abc</value></root>)
 
       validateRequestAction.refine(request).futureValue should matchPattern { case Right(ValidatedRequest(_)) =>
+      }
+    }
+
+    "logs the received payload and all headers except Authorization" in new Setup {
+      val xml = "<root><value>abc</value></root>"
+
+      val request =
+        FakeRequest(POST, "/")
+          .withHeaders(
+            "Authorization"    -> "test-token",
+            "Content-Type"     -> "text/xml",
+            "x-correlation-id" -> "corr-123"
+          )
+          .withTextBody(xml)
+
+      val actionLogger: Logger =
+        LoggerFactory
+          .getLogger(classOf[ValidatedRequestAction])
+          .asInstanceOf[Logger]
+
+      val originalLevel: Level = actionLogger.getLevel
+      val listAppender = new ListAppender[ILoggingEvent]()
+
+      listAppender.start()
+      actionLogger.addAppender(listAppender)
+      actionLogger.setLevel(Level.DEBUG)
+
+      try {
+        validateRequestAction
+          .refine(request)
+          .futureValue should matchPattern { case Right(ValidatedRequest(_)) =>
+        }
+
+        val logMessage: String =
+          listAppender.list.asScala
+            .find(event =>
+              event.getLevel == Level.DEBUG &&
+                event.getFormattedMessage.startsWith(
+                  "Received notification from HMRC"
+                )
+            )
+            .map(_.getFormattedMessage)
+            .getOrElse(fail("Expected DEBUG log entry was not found"))
+
+        logMessage should include(xml)
+
+        val expectedHeaders =
+          request.headers.headers.filterNot { case (name, _) =>
+            name.equalsIgnoreCase("Authorization")
+          }
+
+        expectedHeaders.foreach { case (name, value) =>
+          logMessage should include(s"$name=$value")
+        }
+
+        logMessage.toLowerCase should not include "authorization"
+        logMessage             should not include "test-token"
+      } finally {
+        actionLogger.detachAppender(listAppender)
+        actionLogger.setLevel(originalLevel)
+        listAppender.stop()
       }
     }
 
