@@ -17,7 +17,7 @@
 package uk.gov.hmrc.automatedexportsystemnotifications.controllers.actions
 
 import org.mockito.Mockito.*
-import play.api.mvc.{BodyParsers, Results}
+import play.api.mvc.Results
 import play.api.test.FakeRequest
 import play.api.test.Helpers.*
 import uk.gov.hmrc.automatedexportsystemnotifications.helpers.BaseSpec
@@ -31,9 +31,10 @@ class ValidatedRequestActionSpec extends BaseSpec {
   trait Setup {
     when(mockAppConfig.eisToken).thenReturn("test-token")
 
-    private val cc            = stubControllerComponents()
-    private val bodyParsers   = new BodyParsers.Default(cc.parsers)
-    val validateRequestAction = new ValidatedRequestAction(bodyParsers, mockAppConfig)
+    private val cc = stubControllerComponents()
+
+    val validateRequestAction =
+      new ValidatedRequestAction(cc.parsers, mockAppConfig)
   }
   "refine" - {
     "returns Unauthorized when Authorization header is missing" in new Setup {

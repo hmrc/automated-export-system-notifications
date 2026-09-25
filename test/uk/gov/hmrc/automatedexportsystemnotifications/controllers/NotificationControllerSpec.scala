@@ -28,7 +28,6 @@ import uk.gov.hmrc.http.HeaderCarrier
 import play.api.test.Helpers.stubControllerComponents
 
 import java.time.{Clock, Instant, ZoneOffset}
-import play.api.mvc.BodyParsers
 
 import scala.concurrent.Future
 
@@ -39,11 +38,10 @@ class NotificationControllerSpec extends BaseSpec {
     when(mockAppConfig.eisToken).thenReturn("test-token")
     val fixedClock: Clock = Clock.fixed(Instant.parse("2026-08-11T12:00:00Z"), ZoneOffset.UTC)
 
-    val cc                  = stubControllerComponents()
-    private val bodyParsers = new BodyParsers.Default(cc.parsers)
+    val cc = stubControllerComponents()
 
     val validatedRequestAction: ValidatedRequestAction =
-      new ValidatedRequestAction(bodyParsers, mockAppConfig)
+      new ValidatedRequestAction(cc.parsers, mockAppConfig)
 
   "NotificationController.notification" - {
 
