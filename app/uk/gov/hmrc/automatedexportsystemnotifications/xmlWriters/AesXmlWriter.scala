@@ -37,7 +37,7 @@ object AesNotificationWriter {
         payload.errors
           .filter(_.nonEmpty)
           .map: errs =>
-            <notificationErrors>{errs.map(toErrorXml)}</notificationErrors>
+            <errors>{errs.map(toErrorXml)}</errors>
           .getOrElse(NodeSeq.Empty)
       }
       </notification>
