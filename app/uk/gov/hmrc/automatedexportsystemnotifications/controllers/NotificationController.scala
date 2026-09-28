@@ -83,7 +83,13 @@ class NotificationController @Inject() (
     req.body.asXml
       .map(_.toString)
       .orElse(req.body.asText)
-      .orElse(req.body.asRaw.flatMap(_.asBytes().map(_.utf8String)))
+      .orElse(
+        req.body.asRaw.flatMap(raw =>
+          raw
+            .asBytes(raw.size)
+            .map(_.utf8String)
+        )
+      )
 
   private def toNotification(in: IncomingPayload, req: RequestHeader): NotificationPayload = {
     val correlationId = req.headers.get("x-correlation-id").getOrElse("")
