@@ -17,7 +17,8 @@
 package uk.gov.hmrc.automatedexportsystemnotifications.controllers.actions
 
 import org.mockito.Mockito.*
-import play.api.mvc.Results
+import org.apache.pekko.util.ByteString
+import play.api.mvc.{AnyContentAsRaw, RawBuffer, Results}
 import play.api.test.FakeRequest
 import play.api.test.Helpers.*
 import uk.gov.hmrc.automatedexportsystemnotifications.helpers.BaseSpec
@@ -131,6 +132,76 @@ class ValidatedRequestActionSpec extends BaseSpec {
 
         logMessage.toLowerCase should not include "authorization"
         logMessage             should not include "test-token"
+      } finally {
+        actionLogger.detachAppender(listAppender)
+        actionLogger.setLevel(originalLevel)
+        listAppender.stop()
+      }
+    }
+
+    "logs and accepts a raw payload larger than 100 KB" in new Setup {
+      val largeValue = "x" * 150000
+
+      val xml =
+        s"""<?xml version="1.0" encoding="UTF-8"?><root   attr="x" ><value>$largeValue</value></root>"""
+
+      val payloadBytes = ByteString(xml, "UTF-8")
+      val rawBuffer    = mock[RawBuffer]
+
+      when(rawBuffer.size)
+        .thenReturn(payloadBytes.size.toLong)
+
+      when(rawBuffer.asBytes(payloadBytes.size.toLong))
+        .thenReturn(Some(payloadBytes))
+
+      val request =
+        FakeRequest(POST, "/")
+          .withHeaders(
+            "Authorization"    -> "test-token",
+            "Content-Type"     -> "application/xml",
+            "Content-Length"   -> payloadBytes.size.toString,
+            "x-correlation-id" -> "corr-large-payload"
+          )
+          .withBody(AnyContentAsRaw(rawBuffer))
+
+      val actionLogger: Logger =
+        LoggerFactory
+          .getLogger(classOf[ValidatedRequestAction])
+          .asInstanceOf[Logger]
+
+      val originalLevel: Level = actionLogger.getLevel
+      val listAppender = new ListAppender[ILoggingEvent]()
+
+      listAppender.start()
+      actionLogger.addAppender(listAppender)
+      actionLogger.setLevel(Level.DEBUG)
+
+      try {
+        validateRequestAction
+          .refine(request)
+          .futureValue should matchPattern { case Right(ValidatedRequest(_)) =>
+        }
+
+        val logMessage: String =
+          listAppender.list.asScala
+            .find(event =>
+              event.getLevel == Level.DEBUG &&
+                event.getFormattedMessage.startsWith(
+                  "Received notification from HMRC"
+                )
+            )
+            .map(_.getFormattedMessage)
+            .getOrElse(fail("Expected DEBUG log entry was not found"))
+
+        logMessage should include(xml)
+        logMessage should include(
+          "x-correlation-id=corr-large-payload"
+        )
+
+        logMessage.toLowerCase should not include "authorization"
+        logMessage             should not include "test-token"
+
+        verify(rawBuffer).asBytes(payloadBytes.size.toLong)
       } finally {
         actionLogger.detachAppender(listAppender)
         actionLogger.setLevel(originalLevel)

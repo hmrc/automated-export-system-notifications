@@ -108,7 +108,11 @@ class ValidatedRequestAction @Inject() (
 
   private def extractPayload(any: AnyContent): Option[String] =
     any.asRaw
-      .flatMap(_.asBytes().map(_.utf8String))
+      .flatMap(rawBuffer =>
+        rawBuffer
+          .asBytes(rawBuffer.size)
+          .map(_.utf8String)
+      )
       .orElse(any.asText)
       .orElse(any.asXml.map(_.toString()))
 }
