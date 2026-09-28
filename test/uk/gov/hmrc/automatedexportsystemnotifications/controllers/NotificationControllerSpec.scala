@@ -17,6 +17,8 @@
 package uk.gov.hmrc.automatedexportsystemnotifications.controllers
 
 import org.mockito.ArgumentMatchers
+import org.apache.pekko.util.ByteString
+import play.api.mvc.{AnyContentAsRaw, RawBuffer}
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.*
 import play.api.test.FakeRequest
@@ -34,7 +36,7 @@ import scala.concurrent.Future
 class NotificationControllerSpec extends BaseSpec {
 
   trait Setup:
-
+    clearInvocations(mockService)
     when(mockAppConfig.eisToken).thenReturn("test-token")
     val fixedClock: Clock = Clock.fixed(Instant.parse("2026-08-11T12:00:00Z"), ZoneOffset.UTC)
 
@@ -70,6 +72,78 @@ class NotificationControllerSpec extends BaseSpec {
       status(result)        shouldBe BAD_REQUEST
       contentAsString(result) should include("Invalid XML payload")
       verifyNoInteractions(mockService)
+    }
+
+    "return 204 when a notification payload is larger than 100 KB" in new Setup {
+      when(
+        mockService.sendNotification(
+          any[String],
+          any[String],
+          any[String],
+          any[NotificationStatus],
+          any[Option[List[NotificationError]]]
+        )(any[HeaderCarrier])
+      ).thenReturn(Future.successful(Right(())))
+
+      val largePadding = " " * 150000
+
+      val xml =
+        s"""<?xml version="1.0" encoding="UTF-8"?>
+           |<AESDigitalNotification xmlns="http://www.hmrc.gsi.gov.uk/eis">
+           |  <Header>
+           |    <messageSender>NECA.XI</messageSender>
+           |    <messageRecipient>GB123456789000</messageRecipient>
+           |    <preparationDateTime>2026-07-21T10:00:00</preparationDateTime>
+           |    <messageIdentification>f50929c4-39f5-4f33-8172-77a22588d</messageIdentification>
+           |    <messageType>ACK</messageType>
+           |    <correlationIdentifier>f50929c4-39f5-4f33-8172-77a22588d</correlationIdentifier>
+           |  </Header>
+           |  $largePadding
+           |  <Body>
+           |    <messageCode>CC507C</messageCode>
+           |    <actionCode>1</actionCode>
+           |    <MRN>26GB123456789ABCDE1</MRN>
+           |  </Body>
+           |</AESDigitalNotification>""".stripMargin
+
+      val payloadBytes = ByteString(xml, "UTF-8")
+      val rawBuffer    = mock[RawBuffer]
+
+      when(rawBuffer.size)
+        .thenReturn(payloadBytes.size.toLong)
+
+      when(rawBuffer.asBytes(payloadBytes.size.toLong))
+        .thenReturn(Some(payloadBytes))
+
+      val controller =
+        new NotificationController(
+          cc,
+          validatedRequestAction,
+          mockService,
+          fixedClock
+        )
+
+      val request =
+        FakeRequest(POST, "/notifications")
+          .withHeaders(
+            "Authorization"    -> "test-token",
+            "Content-Type"     -> "application/xml",
+            "Content-Length"   -> payloadBytes.size.toString,
+            "x-correlation-id" -> "corr-123"
+          )
+          .withBody(AnyContentAsRaw(rawBuffer))
+
+      val result = controller.notification(request)
+
+      status(result) shouldBe NO_CONTENT
+
+      verify(mockService, times(1)).sendNotification(
+        ArgumentMatchers.eq("corr-123"),
+        ArgumentMatchers.eq("GB123456789000"),
+        ArgumentMatchers.eq("26GB123456789ABCDE1"),
+        ArgumentMatchers.eq(NotificationStatus.Accepted),
+        ArgumentMatchers.eq(None)
+      )(any[HeaderCarrier])
     }
 
     "return 204 when parse succeeds and service returns success" in new Setup {
