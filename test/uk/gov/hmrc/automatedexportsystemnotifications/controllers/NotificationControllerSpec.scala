@@ -49,7 +49,7 @@ class NotificationControllerSpec extends BaseSpec {
 
     "return 400 when xml payload is missing" in new Setup {
       val request = FakeRequest(POST, "/notifications")
-        .withHeaders("Authorization" -> "test-token")
+        .withHeaders("Authorization" -> "Bearer test-token")
 
       val controller = new NotificationController(cc, validatedRequestAction, mockService, fixedClock)
 
@@ -65,7 +65,7 @@ class NotificationControllerSpec extends BaseSpec {
 
       val badXml =
         """<AESDigitalNotification><Body><messageCode>CC507C</messageCode>"""
-      val badRequest = FakeRequest(POST, "/notifications").withTextBody(badXml).withHeaders("Authorization" -> "test-token")
+      val badRequest = FakeRequest(POST, "/notifications").withTextBody(badXml).withHeaders("Authorization" -> "Bearer test-token")
 
       val result = controller.notification(badRequest)
 
@@ -126,7 +126,7 @@ class NotificationControllerSpec extends BaseSpec {
       val request =
         FakeRequest(POST, "/notifications")
           .withHeaders(
-            "Authorization"    -> "test-token",
+            "Authorization"    -> "Bearer test-token",
             "Content-Type"     -> "application/xml",
             "Content-Length"   -> payloadBytes.size.toString,
             "x-correlation-id" -> "corr-123"
@@ -180,7 +180,7 @@ class NotificationControllerSpec extends BaseSpec {
       val request =
         FakeRequest(POST, "/notifications")
           .withTextBody(xml)
-          .withHeaders("x-correlation-id" -> "corr-123", "Authorization" -> "test-token")
+          .withHeaders("x-correlation-id" -> "corr-123", "Authorization" -> "Bearer test-token")
 
       val result = controller.notification(request)
 
@@ -245,7 +245,7 @@ class NotificationControllerSpec extends BaseSpec {
       val request =
         FakeRequest(POST, "/notifications")
           .withTextBody(xml)
-          .withHeaders("x-correlation-id" -> "corr-123", "Authorization" -> "test-token")
+          .withHeaders("x-correlation-id" -> "corr-123", "Authorization" -> "Bearer test-token")
 
       val result = controller.notification(request)
 
@@ -326,7 +326,7 @@ class NotificationControllerSpec extends BaseSpec {
       val request =
         FakeRequest(POST, "/notifications")
           .withTextBody(xml)
-          .withHeaders("x-correlation-id" -> "corr-123", "Authorization" -> "test-token")
+          .withHeaders("x-correlation-id" -> "corr-123", "Authorization" -> "Bearer test-token")
 
       when(
         mockService.sendNotification(
@@ -401,7 +401,7 @@ class NotificationControllerSpec extends BaseSpec {
       val request =
         FakeRequest(POST, "/notifications")
           .withTextBody(xml)
-          .withHeaders("x-correlation-id" -> "corr-123", "Authorization" -> "test-token")
+          .withHeaders("x-correlation-id" -> "corr-123", "Authorization" -> "Bearer test-token")
 
       val result = controller.notification(request)
 

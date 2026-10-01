@@ -56,14 +56,14 @@ class ValidatedRequestActionSpec extends BaseSpec {
 
     "returns BadRequest when body is missing" in new Setup {
       val request = FakeRequest(POST, "/")
-        .withHeaders("Authorization" -> "test-token")
+        .withHeaders("Authorization" -> "Bearer test-token")
 
       validateRequestAction.refine(request).futureValue shouldBe Left(Results.BadRequest("Request body is required"))
     }
 
     "returns BadRequest when XML is invalid" in new Setup {
       val request = FakeRequest(POST, "/")
-        .withHeaders("Authorization" -> "test-token", "Content-Type" -> "application/xml")
+        .withHeaders("Authorization" -> "Bearer test-token", "Content-Type" -> "application/xml")
         .withTextBody("<xml>")
 
       validateRequestAction.refine(request).futureValue shouldBe Left(Results.BadRequest("Invalid XML payload"))
@@ -71,7 +71,7 @@ class ValidatedRequestActionSpec extends BaseSpec {
 
     "returns ValidatedRequest when XML is valid" in new Setup {
       val request = FakeRequest(POST, "/")
-        .withHeaders("Authorization" -> "test-token", "Content-Type" -> "application/xml")
+        .withHeaders("Authorization" -> "Bearer test-token", "Content-Type" -> "application/xml")
         .withXmlBody(<root><value>abc</value></root>)
 
       validateRequestAction.refine(request).futureValue should matchPattern { case Right(ValidatedRequest(_)) =>
@@ -84,7 +84,7 @@ class ValidatedRequestActionSpec extends BaseSpec {
       val request =
         FakeRequest(POST, "/")
           .withHeaders(
-            "Authorization"    -> "test-token",
+            "Authorization"    -> "Bearer test-token",
             "Content-Type"     -> "text/xml",
             "x-correlation-id" -> "corr-123"
           )
@@ -157,7 +157,7 @@ class ValidatedRequestActionSpec extends BaseSpec {
       val request =
         FakeRequest(POST, "/")
           .withHeaders(
-            "Authorization"    -> "test-token",
+            "Authorization"    -> "Bearer test-token",
             "Content-Type"     -> "application/xml",
             "Content-Length"   -> payloadBytes.size.toString,
             "x-correlation-id" -> "corr-large-payload"
@@ -211,7 +211,7 @@ class ValidatedRequestActionSpec extends BaseSpec {
 
     "returns ValidatedRequest when body is text and valid XML" in new Setup {
       val request = FakeRequest(POST, "/")
-        .withHeaders("Authorization" -> "test-token", "Content-Type" -> "text/xml")
+        .withHeaders("Authorization" -> "Bearer test-token", "Content-Type" -> "text/xml")
         .withTextBody("<root><value>abc</value></root>")
 
       validateRequestAction.refine(request).futureValue should matchPattern { case Right(ValidatedRequest(_)) =>
