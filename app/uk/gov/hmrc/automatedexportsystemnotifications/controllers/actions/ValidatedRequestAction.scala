@@ -36,7 +36,7 @@ class ValidatedRequestAction @Inject() (
     with ActionRefiner[Request, ValidatedRequest]
     with Logging {
 
-  private val expectedAuthHeader: String = appConfig.eisToken
+  private val expectedAuthHeader: String = s"Bearer ${appConfig.eisToken}"
 
   override def parser: BodyParser[AnyContent] = bodyParsers.raw.map(rawBuffer => AnyContentAsRaw(rawBuffer))
 
