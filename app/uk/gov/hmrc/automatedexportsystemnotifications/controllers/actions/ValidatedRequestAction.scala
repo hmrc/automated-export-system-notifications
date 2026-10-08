@@ -36,7 +36,7 @@ class ValidatedRequestAction @Inject() (
     with ActionRefiner[Request, ValidatedRequest]
     with Logging {
 
-  private val expectedAuthHeader: String = s"Bearer ${appConfig.eisToken}"
+  private val bearerPrefix = "Bearer "
 
   override def parser: BodyParser[AnyContent] = bodyParsers.raw.map(rawBuffer => AnyContentAsRaw(rawBuffer))
 
@@ -64,9 +64,15 @@ class ValidatedRequestAction @Inject() (
     )
 
     val maybeAuth: Option[String] =
-      request.headers.get("Authorization")
+      request.headers.get("Authorization").map(_.trim)
 
-    if (maybeAuth.forall(_ != expectedAuthHeader)) {
+    val isValidAuth: Boolean =
+      maybeAuth.exists { auth =>
+        auth.startsWith(bearerPrefix) &&
+        auth.drop(bearerPrefix.length).equalsIgnoreCase(appConfig.eisToken)
+      }
+
+    if (!isValidAuth) {
       val warningMessage: String =
         if (maybeAuth.isEmpty)
           "Notification request rejected: missing authorization header"

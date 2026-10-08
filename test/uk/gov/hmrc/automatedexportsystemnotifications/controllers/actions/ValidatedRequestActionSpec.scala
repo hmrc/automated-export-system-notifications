@@ -30,7 +30,7 @@ import scala.jdk.CollectionConverters.*
 
 class ValidatedRequestActionSpec extends BaseSpec {
   trait Setup {
-    when(mockAppConfig.eisToken).thenReturn("test-token")
+    when(mockAppConfig.eisToken).thenReturn("TEST-token")
 
     private val cc = stubControllerComponents()
 
@@ -56,7 +56,7 @@ class ValidatedRequestActionSpec extends BaseSpec {
 
     "returns BadRequest when body is missing" in new Setup {
       val request = FakeRequest(POST, "/")
-        .withHeaders("Authorization" -> "Bearer test-token")
+        .withHeaders("Authorization" -> "Bearer test-Token")
 
       validateRequestAction.refine(request).futureValue shouldBe Left(Results.BadRequest("Request body is required"))
     }
@@ -71,7 +71,7 @@ class ValidatedRequestActionSpec extends BaseSpec {
 
     "returns ValidatedRequest when XML is valid" in new Setup {
       val request = FakeRequest(POST, "/")
-        .withHeaders("Authorization" -> "Bearer test-token", "Content-Type" -> "application/xml")
+        .withHeaders("Authorization" -> "Bearer Test-Token", "Content-Type" -> "application/xml")
         .withXmlBody(<root><value>abc</value></root>)
 
       validateRequestAction.refine(request).futureValue should matchPattern { case Right(ValidatedRequest(_)) =>
