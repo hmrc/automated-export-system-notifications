@@ -55,6 +55,37 @@ class EisPayloadXmlParserSpec extends BaseSpec {
       )
     }
 
+    "parse AckBody payload (CC507C) where action code is missing" in {
+      val xml =
+        """<AESDigitalNotification xmlns="http://www.hmrc.gsi.gov.uk/eis">
+          |    <Header>
+          |        <messageSender>NECA.XI</messageSender>
+          |        <messageRecipient>GB123456789000</messageRecipient>
+          |        <preparationDateTime>2026-07-21T10:00:00</preparationDateTime>
+          |        <messageIdentification>f50929c4-39f5-4f33-8172-77a22588d</messageIdentification>
+          |        <messageType>ACK</messageType>
+          |        <correlationIdentifier>f50929c4-39f5-4f33-8172-77a22588d</correlationIdentifier>
+          |    </Header>
+          |  <Body>
+          |        <messageCode>CC507C</messageCode>
+          |        <MRN>26GB123456789ABCDE1</MRN>
+          |  </Body>
+          |</AESDigitalNotification>""".stripMargin
+
+      val result = EisPayloadXmlParser.parse(xml)
+
+      result shouldBe Right(
+        IncomingPayload.Ack(
+          AckBody(
+            MessageCode = "CC507C",
+            ActionCode = 1,
+            MRN = "26GB123456789ABCDE1",
+            eori = "GB123456789000"
+          )
+        )
+      )
+    }
+
     "parse IE506Body payload (CC906C) with multiple FunctionalError entries" in {
       val xml =
         """<?xml version="1.0" encoding="UTF-8"?>
@@ -93,8 +124,8 @@ class EisPayloadXmlParserSpec extends BaseSpec {
             MRN = "26GB123456789ABCDE1",
             eori = "GB123456789000",
             FunctionalError = List(
-              FunctionalError("ptr-1", 100, "reason-1", Some("attr-1")),
-              FunctionalError("ptr-2", 200, "reason-2", None)
+              FunctionalError(Some("ptr-1"), 100, Some("reason-1"), Some("attr-1")),
+              FunctionalError(Some("ptr-2"), 200, Some("reason-2"), None)
             )
           )
         )
@@ -139,8 +170,8 @@ class EisPayloadXmlParserSpec extends BaseSpec {
             MRN = "26GB123456789ABCDE1",
             eori = "GB123456789000",
             XmlError = List(
-              XMLError("xptr-1", 300, "ERRTXT1", Some("orig-1")),
-              XMLError("xptr-2", 301, "ERRTXT2", None)
+              XMLError(Some("xptr-1"), 300, Some("ERRTXT1"), Some("orig-1")),
+              XMLError(Some("xptr-2"), 301, Some("ERRTXT2"), None)
             )
           )
         )

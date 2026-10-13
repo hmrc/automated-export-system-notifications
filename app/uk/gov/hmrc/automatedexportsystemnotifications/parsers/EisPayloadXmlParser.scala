@@ -42,10 +42,12 @@ object EisPayloadXmlParser extends Logging:
 
   def parseAck(root: Node, body: Node): Either[String, AckBody] =
     for
-      actionCode <- Helpers.requiredInt(body, "actionCode")
-      mrn        <- Helpers.requiredText(body, "MRN")
-      header     <- Helpers.requiredNode(root, "Header")
-      eori       <- Helpers.requiredText(header, "messageRecipient")
+      actionCode <- Helpers.optionalText(body, "actionCode") match
+                      case None    => Right(1)
+                      case Some(s) => s.toIntOption.toRight(s"Field actionCode must be an Int, got: $s")
+      mrn    <- Helpers.requiredText(body, "MRN")
+      header <- Helpers.requiredNode(root, "Header")
+      eori   <- Helpers.requiredText(header, "messageRecipient")
     yield AckBody(ActionCode = actionCode, MRN = mrn, eori = eori)
 
   private def parseIE906(root: Node, body: Node): Either[String, IE906Body] =
@@ -67,14 +69,11 @@ object EisPayloadXmlParser extends Logging:
   private def parseFunctionalErrors(nodes: Seq[Node]): Either[String, List[FunctionalError]] =
     Helpers.sequence(
       nodes.toList.map { n =>
-        for
-          pointer <- Helpers.requiredText(n, "errorPointer")
-          code    <- Helpers.requiredInt(n, "errorCode")
-          reason  <- Helpers.requiredText(n, "errorReason")
+        for code <- Helpers.requiredInt(n, "errorCode")
         yield FunctionalError(
-          errorPointer = pointer,
+          errorPointer = Helpers.optionalText(n, "errorPointer"),
           errorCode = code,
-          errorReason = reason,
+          errorReason = Helpers.optionalText(n, "errorReason"),
           originalAttribute = Helpers.optionalText(n, "originalAttributeValue")
         )
       }
@@ -83,14 +82,11 @@ object EisPayloadXmlParser extends Logging:
   private def parseXmlErrors(nodes: Seq[Node]): Either[String, List[XMLError]] =
     Helpers.sequence(
       nodes.toList.map { n =>
-        for
-          pointer <- Helpers.requiredText(n, "errorPointer")
-          code    <- Helpers.requiredInt(n, "errorCode")
-          text    <- Helpers.requiredText(n, "errorText")
+        for code <- Helpers.requiredInt(n, "errorCode")
         yield XMLError(
-          errorPointer = pointer,
+          errorPointer = Helpers.optionalText(n, "errorPointer"),
           errorCode = code,
-          errorText = text,
+          errorText = Helpers.optionalText(n, "errorText"),
           originalAttribute = Helpers.optionalText(n, "originalAttributeValue")
         )
       }

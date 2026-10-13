@@ -24,9 +24,9 @@ object IncomingPayloadErrorTranslator:
     val unified = ErrorMapper.toUnified(IE906, err.errorCode)
     UnifiedErrorMetadata(
       unifiedCode = unified,
-      path = Option(err.errorPointer).map(_.trim).filter(_.nonEmpty),
+      path = trimToOpt(err.errorPointer),
       description = unified.description,
-      originalValue = err.originalAttribute.map(_.trim).filter(_.nonEmpty)
+      originalValue = trimToOpt(err.originalAttribute)
     )
   }
 
@@ -34,9 +34,9 @@ object IncomingPayloadErrorTranslator:
     val unified = ErrorMapper.toUnified(IE917, err.errorCode)
     UnifiedErrorMetadata(
       unifiedCode = unified,
-      path = Option(err.errorPointer).map(_.trim).filter(_.nonEmpty),
+      path = trimToOpt(err.errorPointer),
       description = unified.description,
-      originalValue = err.originalAttribute.map(_.trim).filter(_.nonEmpty)
+      originalValue = trimToOpt(err.originalAttribute)
     )
   }
 
@@ -46,3 +46,6 @@ object IncomingPayloadErrorTranslator:
       case IncomingPayload.IE917(b) => b.XmlError.map(IncomingPayloadErrorTranslator.fromIe917Error)
       case _                        => Nil
     }
+
+  private def trimToOpt(value: Option[String]): Option[String] =
+    value.map(_.trim).filter(_.nonEmpty)

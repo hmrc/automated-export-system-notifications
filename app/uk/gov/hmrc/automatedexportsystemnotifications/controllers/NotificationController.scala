@@ -108,7 +108,7 @@ class NotificationController @Inject() (
             NotificationError(
               code = unified.code,
               description = Some(unified.description),
-              path = Some(e.errorPointer),
+              path = e.errorPointer,
               originalValue = e.originalAttribute
             ))
         )
@@ -133,7 +133,7 @@ class NotificationController @Inject() (
             NotificationError(
               code = unified.code,
               description = Some(unified.description),
-              path = Some(e.errorPointer),
+              path = e.errorPointer,
               originalValue = e.originalAttribute
             ))
         )
