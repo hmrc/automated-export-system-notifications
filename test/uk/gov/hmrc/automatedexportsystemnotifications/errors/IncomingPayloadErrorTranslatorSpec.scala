@@ -31,9 +31,9 @@ class IncomingPayloadErrorTranslatorSpec extends BaseSpec:
           eori = "eori",
           FunctionalError = List(
             FunctionalError(
-              errorPointer = " Body.ExportOperation.MRN ",
+              errorPointer = Some(" Body.ExportOperation.MRN "),
               errorCode = 90,
-              errorReason = "some reason",
+              errorReason = Some("some reason"),
               originalAttribute = Some(" 26GB123 ")
             )
           )
@@ -56,9 +56,9 @@ class IncomingPayloadErrorTranslatorSpec extends BaseSpec:
           eori = "eori",
           XmlError = List(
             XMLError(
-              errorPointer = " Body.Some.Path ",
+              errorPointer = Some(" Body.Some.Path "),
               errorCode = 13,
-              errorText = "missing field",
+              errorText = Some("missing field"),
               originalAttribute = Some("  abc  ")
             )
           )
@@ -81,9 +81,9 @@ class IncomingPayloadErrorTranslatorSpec extends BaseSpec:
           eori = "eori",
           FunctionalError = List(
             FunctionalError(
-              errorPointer = "   ",
+              errorPointer = Some("   "),
               errorCode = 90,
-              errorReason = "some reason",
+              errorReason = Some("some reason"),
               originalAttribute = Some("   ")
             )
           )
@@ -94,6 +94,28 @@ class IncomingPayloadErrorTranslatorSpec extends BaseSpec:
 
       result.head.path          shouldBe None
       result.head.originalValue shouldBe None
+    }
+
+    "set path to None whenmissing" in {
+      val payload = IncomingPayload.IE906(
+        IE906Body(
+          MRN = "mrn",
+          eori = "eori",
+          FunctionalError = List(
+            FunctionalError(
+              errorPointer = None,
+              errorCode = 90,
+              errorReason = None,
+              originalAttribute = Some("   ")
+            )
+          )
+        )
+      )
+
+      val result = IncomingPayloadErrorTranslator.toUnifiedErrors(payload)
+
+      result.head.path        shouldBe None
+      result.head.description shouldBe "MRN not found"
     }
 
     "return empty list for non-error payloads (e.g. Ack)" in {

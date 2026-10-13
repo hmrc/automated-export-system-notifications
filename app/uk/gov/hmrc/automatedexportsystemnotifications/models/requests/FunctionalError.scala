@@ -17,8 +17,8 @@
 package uk.gov.hmrc.automatedexportsystemnotifications.models.requests
 
 case class FunctionalError(
-  errorPointer:      String,
+  errorPointer:      Option[String],
   errorCode:         Int,
-  errorReason:       String,
+  errorReason:       Option[String],
   originalAttribute: Option[String]
 )
