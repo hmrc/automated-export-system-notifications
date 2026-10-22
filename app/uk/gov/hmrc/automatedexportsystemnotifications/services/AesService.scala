@@ -20,7 +20,7 @@ import javax.inject.{Inject, Singleton}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.automatedexportsystemnotifications.connectors.AesConnector
 import uk.gov.hmrc.automatedexportsystemnotifications.models.aesRequest.{NotificationError, NotificationPayload, NotificationStatus}
-import uk.gov.hmrc.automatedexportsystemnotifications.xmlWriters.*
+import uk.gov.hmrc.automatedexportsystemnotifications.xml.*
 
 import java.time.{Clock, OffsetDateTime, ZoneOffset}
 import scala.concurrent.Future

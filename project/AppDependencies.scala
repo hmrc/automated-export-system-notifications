@@ -5,7 +5,8 @@ object AppDependencies {
   private val playVersion      = "play-30"
 
   val compile: Seq[ModuleID] = Seq(
-    "uk.gov.hmrc" %% s"bootstrap-backend-$playVersion" % bootstrapVersion
+    "uk.gov.hmrc"   %% s"bootstrap-backend-$playVersion" % bootstrapVersion,
+    "org.typelevel" %% "cats-core"                       % "2.13.0"
   )
 
   val test: Seq[ModuleID] = Seq(
