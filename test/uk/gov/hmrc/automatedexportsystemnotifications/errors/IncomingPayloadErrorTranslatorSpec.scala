@@ -54,6 +54,7 @@ class IncomingPayloadErrorTranslatorSpec extends BaseSpec:
         IE917Body(
           MRN = "mrn",
           eori = "eori",
+          correlationId = "some-correlationId",
           XmlError = List(
             XMLError(
               errorPointer = Some(" Body.Some.Path "),

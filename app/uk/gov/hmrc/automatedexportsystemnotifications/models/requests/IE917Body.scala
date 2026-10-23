@@ -17,8 +17,9 @@
 package uk.gov.hmrc.automatedexportsystemnotifications.models.requests
 
 case class IE917Body(
-  MessageCode: String = "CD917C",
-  MRN:         String,
-  eori:        String,
-  XmlError:    List[XMLError]
+  MessageCode:   String = "CD917C",
+  correlationId: String,
+  MRN:           String,
+  eori:          String,
+  XmlError:      List[XMLError]
 )

@@ -133,8 +133,9 @@ class EisPayloadXmlParserSpec extends BaseSpec {
     }
 
     "parse IE917Body payload (CD917C) with multiple XmlError entries" in {
-      val xml =
-        """<?xml version="1.0" encoding="UTF-8"?>
+      val correlationId = "f50929c439f54f33817277a22588d3"
+      val xml           =
+        s"""<?xml version="1.0" encoding="UTF-8"?>
           |<AESDigitalNotification xmlns="http://www.hmrc.gsi.gov.uk/eis">
           |    <Header>
           |        <messageSender>NECA.XI</messageSender>
@@ -142,7 +143,7 @@ class EisPayloadXmlParserSpec extends BaseSpec {
           |        <preparationDateTime>2026-07-21T10:00:00</preparationDateTime>
           |        <messageIdentification>f50929c4-39f5-4f33-8172-77a22588d2</messageIdentification>
           |        <messageType>CD917C</messageType>
-          |        <correlationIdentifier>f50929c4-39f5-4f33-8172-77a22588d3</correlationIdentifier>
+          |        <correlationIdentifier>$correlationId</correlationIdentifier>
           |    </Header>
           |
           |    <Body>
@@ -168,6 +169,7 @@ class EisPayloadXmlParserSpec extends BaseSpec {
           IE917Body(
             MessageCode = "CD917C",
             MRN = "26GB123456789ABCDE1",
+            correlationId = correlationId,
             eori = "GB123456789000",
             XmlError = List(
               XMLError(Some("xptr-1"), 300, Some("ERRTXT1"), Some("orig-1")),
