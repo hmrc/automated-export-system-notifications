@@ -1,3 +1,19 @@
+/*
+ * Copyright 2026 HM Revenue & Customs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package uk.gov.hmrc.automatedexportsystemnotifications.validation
 
 import cats.data.NonEmptyList
@@ -27,8 +43,8 @@ class HeaderValidatorSpec extends AnyFreeSpecLike, Matchers, EitherValues:
         "when there are multiple rules but header is not present" in {
           val validator: HeaderValidator =
             HeaderValidator("header")
-              .satisfies(_.endsWith("ASD"), name => HeaderValidationError.InvalidHeader(name, "reason1"))
-              .satisfies(_.startsWith("ABC"), name => HeaderValidationError.InvalidHeader(name, "reason2"))
+              .check(_.endsWith("ASD"), name => HeaderValidationError.InvalidHeader(name, Some("reason1")))
+              .check(_.startsWith("ABC"), name => HeaderValidationError.InvalidHeader(name, Some("reason2")))
 
           val request: FakeRequest[AnyContentAsEmpty.type] =
             FakeRequest()
@@ -39,8 +55,8 @@ class HeaderValidatorSpec extends AnyFreeSpecLike, Matchers, EitherValues:
         "when there are multiple rules and the header is present" in {
           val validator: HeaderValidator =
             HeaderValidator("header")
-              .satisfies(_.endsWith("suffix"), name => HeaderValidationError.InvalidHeader(name, "reason1"))
-              .satisfies(_.startsWith("Prefix"), name => HeaderValidationError.InvalidHeader(name, "reason2"))
+              .check(_.endsWith("suffix"), name => HeaderValidationError.InvalidHeader(name, Some("reason1")))
+              .check(_.startsWith("Prefix"), name => HeaderValidationError.InvalidHeader(name, Some("reason2")))
 
           val request: FakeRequest[AnyContentAsEmpty.type] =
             FakeRequest()
@@ -55,9 +71,9 @@ class HeaderValidatorSpec extends AnyFreeSpecLike, Matchers, EitherValues:
         "when there are multiple unsatisfied rules" in {
           val validator: HeaderValidator =
             HeaderValidator("header")
-              .satisfies(_.endsWith("ASD"), name => HeaderValidationError.InvalidHeader(name, "reason1"))
-              .satisfies(_.nonEmpty, name => HeaderValidationError.InvalidHeader(name, "reason2"))
-              .satisfies(_.startsWith("ABC"), name => HeaderValidationError.InvalidHeader(name, "reason3"))
+              .check(_.endsWith("ASD"), name => HeaderValidationError.InvalidHeader(name, Some("reason1")))
+              .check(_.nonEmpty, name => HeaderValidationError.InvalidHeader(name, Some("reason2")))
+              .check(_.startsWith("ABC"), name => HeaderValidationError.InvalidHeader(name, Some("reason3")))
 
           val request: FakeRequest[AnyContentAsEmpty.type] =
             FakeRequest()
@@ -65,8 +81,8 @@ class HeaderValidatorSpec extends AnyFreeSpecLike, Matchers, EitherValues:
 
           validator.validate(request).toEither.left.value shouldBe
             NonEmptyList.of(
-              HeaderValidationError.InvalidHeader("header", "reason1"),
-              HeaderValidationError.InvalidHeader("header", "reason3")
+              HeaderValidationError.InvalidHeader("header", Some("reason1")),
+              HeaderValidationError.InvalidHeader("header", Some("reason3"))
             )
         }
       }
@@ -93,8 +109,8 @@ class HeaderValidatorSpec extends AnyFreeSpecLike, Matchers, EitherValues:
         "when there are multiple rules and the header is present" in {
           val validator: RequiredHeaderValidator =
             HeaderValidator("header").required
-              .satisfies(_.endsWith("suffix"), name => HeaderValidationError.InvalidHeader(name, "reason1"))
-              .satisfies(_.startsWith("Prefix"), name => HeaderValidationError.InvalidHeader(name, "reason2"))
+              .check(_.endsWith("suffix"), name => HeaderValidationError.InvalidHeader(name, Some("reason1")))
+              .check(_.startsWith("Prefix"), name => HeaderValidationError.InvalidHeader(name, Some("reason2")))
 
           val request: FakeRequest[AnyContentAsEmpty.type] =
             FakeRequest()
@@ -109,9 +125,9 @@ class HeaderValidatorSpec extends AnyFreeSpecLike, Matchers, EitherValues:
         "when there are multiple unsatisfied rules" in {
           val validator: RequiredHeaderValidator =
             HeaderValidator("header").required
-              .satisfies(_.endsWith("ASD"), name => HeaderValidationError.InvalidHeader(name, "reason1"))
-              .satisfies(_.nonEmpty, name => HeaderValidationError.InvalidHeader(name, "reason2"))
-              .satisfies(_.startsWith("ABC"), name => HeaderValidationError.InvalidHeader(name, "reason3"))
+              .check(_.endsWith("ASD"), name => HeaderValidationError.InvalidHeader(name, Some("reason1")))
+              .check(_.nonEmpty, name => HeaderValidationError.InvalidHeader(name, Some("reason2")))
+              .check(_.startsWith("ABC"), name => HeaderValidationError.InvalidHeader(name, Some("reason3")))
 
           val request: FakeRequest[AnyContentAsEmpty.type] =
             FakeRequest()
@@ -119,8 +135,8 @@ class HeaderValidatorSpec extends AnyFreeSpecLike, Matchers, EitherValues:
 
           validator.validate(request).toEither.left.value shouldBe
             NonEmptyList.of(
-              HeaderValidationError.InvalidHeader("header", "reason1"),
-              HeaderValidationError.InvalidHeader("header", "reason3")
+              HeaderValidationError.InvalidHeader("header", Some("reason1")),
+              HeaderValidationError.InvalidHeader("header", Some("reason3"))
             )
         }
       }
