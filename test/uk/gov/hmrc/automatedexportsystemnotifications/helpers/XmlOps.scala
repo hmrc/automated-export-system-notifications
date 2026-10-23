@@ -1,5 +1,8 @@
 package uk.gov.hmrc.automatedexportsystemnotifications.helpers
 
+import java.io.StringReader
+import scala.util.Using
+import scala.util.Using.Releasable
 import scala.xml.*
 
 /** XML normalization method used in [[https://github.com/hmrc/automated-export-system/]] */
@@ -47,4 +50,13 @@ object XmlOps:
 
     combineConsecutiveText(nodes.flatMap(rec))
   end normalize
+
+  private def loadXml[R: Releasable](resource: => R, toInputSource: R => InputSource): Either[Throwable, NodeSeq] =
+    Using(resource)(r => XML.load(toInputSource(r))).toEither
+
+  def loadXmlFromString(xmlString: String): Either[Throwable, NodeSeq] =
+    loadXml(StringReader(xmlString), Source.fromReader)
+
+  def loadXmlFromPath(path: String): Either[Throwable, NodeSeq] =
+    loadXml(getClass.getResourceAsStream(path), Source.fromInputStream)
 end XmlOps
