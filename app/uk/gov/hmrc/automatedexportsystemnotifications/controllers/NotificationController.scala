@@ -123,7 +123,7 @@ class NotificationController @Inject() (
 
       case IncomingPayload.IE917(b) =>
         val payload = NotificationPayload(
-          correlationId,
+          b.correlationId,
           b.eori,
           b.MRN,
           now,

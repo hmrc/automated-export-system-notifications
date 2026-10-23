@@ -60,11 +60,12 @@ object EisPayloadXmlParser extends Logging:
 
   private def parseIE917(root: Node, body: Node): Either[String, IE917Body] =
     for
-      mrn    <- Helpers.requiredText(body, "MRN")
-      header <- Helpers.requiredNode(root, "Header")
-      eori   <- Helpers.requiredText(header, "messageRecipient")
-      errors <- parseXmlErrors(body.child.collect { case n: Node if n.label == "XmlError" => n })
-    yield IE917Body(MRN = mrn, eori = eori, XmlError = errors)
+      mrn           <- Helpers.requiredText(body, "MRN")
+      header        <- Helpers.requiredNode(root, "Header")
+      eori          <- Helpers.requiredText(header, "messageRecipient")
+      correlationId <- Helpers.requiredText(header, "correlationIdentifier")
+      errors        <- parseXmlErrors(body.child.collect { case n: Node if n.label == "XmlError" => n })
+    yield IE917Body(MRN = mrn, eori = eori, correlationId = correlationId, XmlError = errors)
 
   private def parseFunctionalErrors(nodes: Seq[Node]): Either[String, List[FunctionalError]] =
     Helpers.sequence(
