@@ -8,7 +8,8 @@ ThisBuild / scalaVersion := "3.3.8"
 ThisBuild / scalacOptions ++= Seq(
   "-Wconf:src=routes/.*:s", // Silence all warnings in generated routes
   "-Xlint:all",
-  "-Werror"
+  "-Werror",
+  "-feature"
 )
 ThisBuild / scalafmtOnCompile := true
 

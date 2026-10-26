@@ -14,6 +14,14 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.automatedexportsystemnotifications.controllers.actions
+package uk.gov.hmrc.automatedexportsystemnotifications.controllers.actions.requests
 
-class ValidatedActionSpec {}
+import play.api.mvc.{Request, WrappedRequest}
+
+import scala.xml.NodeSeq
+
+final case class CorrelatedNotificationRequest[A](
+  xml:           NodeSeq,
+  correlationId: String,
+  request:       Request[A]
+) extends WrappedRequest[A](request)

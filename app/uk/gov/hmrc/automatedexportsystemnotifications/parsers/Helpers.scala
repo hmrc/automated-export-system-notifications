@@ -16,27 +16,27 @@
 
 package uk.gov.hmrc.automatedexportsystemnotifications.parsers
 import scala.util.Try
-import scala.xml.Node
+import scala.xml.{Node, NodeSeq}
 
 object Helpers:
   val EisNs = "http://www.hmrc.gsi.gov.uk/eis"
 
-  def requiredText(node: scala.xml.Node, label: String): Either[String, String] = {
+  def requiredText(node: NodeSeq, label: String): Either[String, String] = {
     val value = (node \ label).text.trim
     if (value.nonEmpty) Right(value) else Left(s"Missing required field: $label")
   }
 
-  def optionalText(node: scala.xml.Node, label: String): Option[String] = {
+  def optionalText(node: NodeSeq, label: String): Option[String] = {
     val value = (node \ label).text.trim
     if (value.isEmpty) None else Some(value)
   }
 
-  def requiredInt(node: scala.xml.Node, label: String): Either[String, Int] =
+  def requiredInt(node: NodeSeq, label: String): Either[String, Int] =
     requiredText(node, label).flatMap { s =>
       Try(s.toInt).toEither.left.map(_ => s"Field $label must be an Int, got: $s")
     }
 
-  def requiredNode(node: Node, label: String): Either[String, Node] = {
+  def requiredNode(node: NodeSeq, label: String): Either[String, Node] = {
     val n = (node \ label).headOption
     n.toRight(s"Missing required element: $label")
   }

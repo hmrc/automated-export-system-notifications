@@ -18,6 +18,7 @@ package uk.gov.hmrc.automatedexportsystemnotifications.connectors
 
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.*
+import uk.gov.hmrc.automatedexportsystemnotifications.errors.ConnectorError
 import uk.gov.hmrc.automatedexportsystemnotifications.helpers.BaseSpec
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.client.{HttpClientV2, RequestBuilder}
@@ -43,7 +44,8 @@ class AesConnectorSpec extends BaseSpec:
 
       val connector = new AesConnector(mockAppConfig, mockHttp)
 
-      val result = connector.send("<notification/>").futureValue
+      val result: Either[ConnectorError, Unit] =
+        connector.send("<notification/>", "correlationId").value.futureValue
 
       result shouldBe Right(())
 
@@ -60,8 +62,9 @@ class AesConnectorSpec extends BaseSpec:
 
       val connector = new AesConnector(mockAppConfig, mockHttp)
 
-      val result = connector.send("<notification/>").futureValue
+      val result: Either[ConnectorError, Unit] =
+        connector.send("<notification/>", "correlationId").value.futureValue
 
-      result shouldBe Left("Expected 204, got 500. Body: some-error")
+      result should matchPattern { case Left(ConnectorError.UnexpectedStatusError(_, _, status)) if status == 500 => }
     }
   }

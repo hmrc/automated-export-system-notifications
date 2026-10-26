@@ -20,6 +20,7 @@ import cats.data.ValidatedNel
 import cats.implicits.catsSyntaxValidatedId
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.automatedexportsystemnotifications.errors.HeaderValidationError
+import uk.gov.hmrc.automatedexportsystemnotifications.models.http.CustomHeaderNames
 
 sealed abstract class HeaderValidatorT[Self <: HeaderValidatorT[Self]](
   headerName: String
@@ -83,3 +84,7 @@ class RequiredHeaderValidator private[validation] (
 
   override def validate(requestHeader: RequestHeader): ValidatedNel[HeaderValidationError, Unit] =
     requiredRule.andThen(validation).validate(requestHeader)
+
+object RequiredHeaderValidator:
+  lazy val xCorrelationId: RequiredHeaderValidator =
+    HeaderValidator(CustomHeaderNames.X_CORRELATION_ID).required

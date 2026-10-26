@@ -16,20 +16,24 @@
 
 package uk.gov.hmrc.automatedexportsystemnotifications.services
 
-import javax.inject.{Inject, Singleton}
-import uk.gov.hmrc.http.HeaderCarrier
+import cats.data.EitherT
+import play.api.Logging
 import uk.gov.hmrc.automatedexportsystemnotifications.connectors.AesConnector
+import uk.gov.hmrc.automatedexportsystemnotifications.errors.AesServiceError
 import uk.gov.hmrc.automatedexportsystemnotifications.models.aesRequest.{NotificationError, NotificationPayload, NotificationStatus}
 import uk.gov.hmrc.automatedexportsystemnotifications.xml.*
+import uk.gov.hmrc.http.HeaderCarrier
 
 import java.time.{Clock, OffsetDateTime, ZoneOffset}
-import scala.concurrent.Future
+import javax.inject.{Inject, Singleton}
+import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class AesService @Inject() (
   connector: AesConnector,
   clock:     Clock
-) {
+)(using ExecutionContext)
+    extends Logging {
 
   def sendNotification(
     correlationId: String,
@@ -37,7 +41,7 @@ class AesService @Inject() (
     mrn:           String,
     status:        NotificationStatus,
     errors:        Option[List[NotificationError]]
-  )(implicit hc: HeaderCarrier): Future[Either[String, Unit]] = {
+  )(implicit hc: HeaderCarrier): EitherT[Future, AesServiceError, Unit] = {
 
     val payload = NotificationPayload(
       correlationId = correlationId,
@@ -50,10 +54,24 @@ class AesService @Inject() (
 
     AesNotificationWriter.toXml(payload) match {
       case Left(err) =>
-        Future.successful(Left(s"Failed to build AES notification XML: $err"))
+        EitherT(
+          Future.successful(
+            Left(
+              AesServiceError.NotificationFailedError(
+                s"Failed to build AES notification XML: $err"
+              )
+            )
+          )
+        )
 
       case Right(xmlElem) =>
-        connector.send(xmlElem.toString())
+        connector
+          .send(xmlElem.toString(), correlationId)
+          .leftMap(_ =>
+            AesServiceError.NotificationFailedError(
+              s"Failed to send notification to AES. correlationId=$correlationId"
+            )
+          )
     }
   }
 }
