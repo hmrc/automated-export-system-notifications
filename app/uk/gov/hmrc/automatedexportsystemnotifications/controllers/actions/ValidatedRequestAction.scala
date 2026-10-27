@@ -44,9 +44,7 @@ class ValidatedRequestAction @Inject() (
 
   override def refine[A](request: Request[A]): Future[Either[Result, ValidatedRequest[A]]] = {
     val headersToLog: Seq[(String, String)] =
-      request.headers.headers.filterNot { case (name, _) =>
-        name.equalsIgnoreCase("Authorization")
-      }
+      request.headers.headers
 
     val maybePayload: Option[String] =
       request.body match {
