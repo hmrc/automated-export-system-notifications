@@ -122,11 +122,16 @@ class ValidatedRequestActionSpec extends BaseSpec {
         logMessage should include(xml)
 
         val expectedHeaders =
-          request.headers.headers
+          request.headers.headers.filterNot { case (name, _) =>
+            name.equalsIgnoreCase("Authorization")
+          }
 
         expectedHeaders.foreach { case (name, value) =>
           logMessage should include(s"$name=$value")
         }
+
+        logMessage.toLowerCase should not include "authorization"
+        logMessage             should not include "test-token"
       } finally {
         actionLogger.detachAppender(listAppender)
         actionLogger.setLevel(originalLevel)
@@ -192,6 +197,9 @@ class ValidatedRequestActionSpec extends BaseSpec {
         logMessage should include(
           "x-correlation-id=corr-large-payload"
         )
+
+        logMessage.toLowerCase should not include "authorization"
+        logMessage             should not include "test-token"
 
         verify(rawBuffer).asBytes(payloadBytes.size.toLong)
       } finally {
