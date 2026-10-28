@@ -54,7 +54,7 @@ class AesConnector @Inject() (
           if (resp.status == Status.NO_CONTENT) Right(())
           else {
             logger.warn(
-              s"AES request succeeded, but got unexpected status: ${resp.status} " +
+              s"AES request failed with unexpected status: ${resp.status} " +
                 "method=POST " +
                 s"url=$endpoint " +
                 s"correlationId=$correlationId " +

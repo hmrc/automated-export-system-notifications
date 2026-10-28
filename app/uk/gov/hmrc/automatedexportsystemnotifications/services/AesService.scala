@@ -18,6 +18,7 @@ package uk.gov.hmrc.automatedexportsystemnotifications.services
 
 import cats.data.EitherT
 import play.api.Logging
+import play.api.http.Status
 import uk.gov.hmrc.automatedexportsystemnotifications.connectors.AesConnector
 import uk.gov.hmrc.automatedexportsystemnotifications.errors.AesServiceError
 import uk.gov.hmrc.automatedexportsystemnotifications.models.aesRequest.{NotificationError, NotificationPayload, NotificationStatus}
@@ -58,7 +59,8 @@ class AesService @Inject() (
           Future.successful(
             Left(
               AesServiceError.NotificationFailedError(
-                s"Failed to build AES notification XML: $err"
+                s"Failed to build AES notification XML: $err",
+                Status.INTERNAL_SERVER_ERROR
               )
             )
           )
@@ -67,9 +69,10 @@ class AesService @Inject() (
       case Right(xmlElem) =>
         connector
           .send(xmlElem.toString(), correlationId)
-          .leftMap(_ =>
+          .leftMap(err =>
             AesServiceError.NotificationFailedError(
-              s"Failed to send notification to AES. correlationId=$correlationId"
+              s"Failed to send notification to AES",
+              err.status
             )
           )
     }

@@ -69,7 +69,7 @@ final case class HeaderFailedValidationError(errors: NonEmptyList[HeaderValidati
 enum AesServiceError(val message: String, val status: Int) extends NotificationsServiceError:
   val exception: Option[Throwable] = None
 
-  case NotificationFailedError(override val message: String) extends AesServiceError(message, Status.INTERNAL_SERVER_ERROR)
+  case NotificationFailedError(override val message: String, override val status: Int) extends AesServiceError(message, status)
 
 enum ConnectorError(
   val details:   String,

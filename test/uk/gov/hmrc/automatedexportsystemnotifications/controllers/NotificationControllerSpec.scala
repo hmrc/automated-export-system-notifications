@@ -376,7 +376,7 @@ class NotificationControllerSpec extends BaseSpec, EitherValues {
       XmlOps.normalize(resultXml) shouldBe XmlOps.normalize(expectedXmlBodyErrorXml)
     }
 
-    "return 500 when service returns Left" in new Setup {
+    "return 500 when service returns a 500 error" in new Setup {
 
       when(
         mockService.sendNotification(
@@ -386,7 +386,18 @@ class NotificationControllerSpec extends BaseSpec, EitherValues {
           any[NotificationStatus],
           any[Option[List[NotificationError]]]
         )(any[HeaderCarrier])
-      ).thenReturn(EitherT(Future.successful(Left(AesServiceError.NotificationFailedError("Notification failed")))))
+      ).thenReturn(
+        EitherT(
+          Future.successful(
+            Left(
+              AesServiceError.NotificationFailedError(
+                "Notification failed",
+                Helpers.INTERNAL_SERVER_ERROR
+              )
+            )
+          )
+        )
+      )
 
       val xml: Elem =
         <AESDigitalNotification xmlns="http://www.hmrc.gsi.gov.uk/eis">
@@ -422,6 +433,67 @@ class NotificationControllerSpec extends BaseSpec, EitherValues {
         </NotificationsErrorResponse>
 
       Helpers.status(result)      shouldBe Helpers.INTERNAL_SERVER_ERROR
+      Helpers.contentType(result) shouldBe Some(MimeTypes.XML)
+      XmlOps.normalize(resultXml) shouldBe XmlOps.normalize(notificationFailedErrorResponseXml)
+    }
+
+    "return 502 when service returns a 502 error" in new Setup {
+
+      when(
+        mockService.sendNotification(
+          any[String],
+          any[String],
+          any[String],
+          any[NotificationStatus],
+          any[Option[List[NotificationError]]]
+        )(any[HeaderCarrier])
+      ).thenReturn(
+        EitherT(
+          Future.successful(
+            Left(
+              AesServiceError.NotificationFailedError(
+                "Notification failed",
+                Helpers.BAD_GATEWAY
+              )
+            )
+          )
+        )
+      )
+
+      val xml: Elem =
+        <AESDigitalNotification xmlns="http://www.hmrc.gsi.gov.uk/eis">
+          <Header>
+            <messageSender>NECA.XI</messageSender>
+            <messageRecipient>GB123456789000</messageRecipient>
+            <preparationDateTime>2026-07-21T10:00:00</preparationDateTime>
+            <messageIdentification>f50929c4-39f5-4f33-8172-77a22588d</messageIdentification>
+            <messageType>ACK</messageType>
+            <correlationIdentifier>f50929c4-39f5-4f33-8172-77a22588d</correlationIdentifier>
+          </Header>
+          <Body>
+            <messageCode>CC507C</messageCode>
+            <actionCode>1</actionCode>
+            <MRN>26GB123456789ABCDE1</MRN>
+          </Body>
+        </AESDigitalNotification>
+
+      val request =
+        FakeRequest(POST, "/notifications")
+          .withBody(xml)
+          .withHeaders("x-correlation-id" -> "corr-123", "Authorization" -> "Bearer test-token")
+
+      val result = Helpers.call(controller.notification, request)
+
+      val resultContent: String  = Helpers.contentAsString(result)
+      val resultXml:     NodeSeq = XmlOps.loadXmlFromString(resultContent).value
+
+      val notificationFailedErrorResponseXml: Elem =
+        <NotificationsErrorResponse>
+          <status>502</status>
+          <message>Notification failed</message>
+        </NotificationsErrorResponse>
+
+      Helpers.status(result)      shouldBe Helpers.BAD_GATEWAY
       Helpers.contentType(result) shouldBe Some(MimeTypes.XML)
       XmlOps.normalize(resultXml) shouldBe XmlOps.normalize(notificationFailedErrorResponseXml)
     }

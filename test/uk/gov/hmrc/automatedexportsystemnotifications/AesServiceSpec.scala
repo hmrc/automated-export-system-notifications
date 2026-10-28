@@ -20,6 +20,7 @@ import cats.data.EitherT
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.*
 import org.scalatest.EitherValues
+import play.api.test.Helpers
 import uk.gov.hmrc.automatedexportsystemnotifications.connectors.AesConnector
 import uk.gov.hmrc.automatedexportsystemnotifications.errors.{AesServiceError, ConnectorError}
 import uk.gov.hmrc.automatedexportsystemnotifications.helpers.BaseSpec
@@ -78,7 +79,8 @@ class AesServiceSpec extends BaseSpec, EitherValues {
 
       result shouldBe
         AesServiceError.NotificationFailedError(
-          "Failed to build AES notification XML: Each error.code is required and must be non-empty"
+          "Failed to build AES notification XML: Each error.code is required and must be non-empty",
+          Helpers.INTERNAL_SERVER_ERROR
         )
 
       verify(mockConnector, never()).send(any[String], any[String])(any[HeaderCarrier])
@@ -104,7 +106,10 @@ class AesServiceSpec extends BaseSpec, EitherValues {
         .left
         .value
 
-      result shouldBe AesServiceError.NotificationFailedError("Failed to send notification to AES. correlationId=corr-123")
+      result shouldBe AesServiceError.NotificationFailedError(
+        "Failed to send notification to AES",
+        Helpers.BAD_GATEWAY
+      )
     }
   }
 }
