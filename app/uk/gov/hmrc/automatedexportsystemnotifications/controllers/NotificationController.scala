@@ -16,84 +16,124 @@
 
 package uk.gov.hmrc.automatedexportsystemnotifications.controllers
 
+import cats.Functor
+import cats.data.{EitherT, NonEmptyList}
+import cats.implicits.catsSyntaxEither
+import cats.syntax.all.toBifunctorOps
 import play.api.Logging
 import play.api.mvc.*
-import uk.gov.hmrc.automatedexportsystemnotifications.controllers.actions.ValidatedRequestAction
+import uk.gov.hmrc.automatedexportsystemnotifications.config.EisBearerTokenConfig
+import uk.gov.hmrc.automatedexportsystemnotifications.controllers.actions.{CorrelatedPayloadActionRefiner, NotificationsXmlPayloadActionRefiner}
+import uk.gov.hmrc.automatedexportsystemnotifications.controllers.filters.{RequiredAuthorizationFilter, RequiredHeadersFilter}
+import uk.gov.hmrc.automatedexportsystemnotifications.errors.{ExpectedXmlBodyError, NotificationsServiceError, RequestError, XmlFailedReadError}
 import uk.gov.hmrc.automatedexportsystemnotifications.models.*
 import uk.gov.hmrc.automatedexportsystemnotifications.models.aesRequest.{NotificationError, NotificationPayload, NotificationStatus}
 import uk.gov.hmrc.automatedexportsystemnotifications.models.errors.{ErrorMapper, ErrorSource, UnifiedErrorCode}
+import uk.gov.hmrc.automatedexportsystemnotifications.models.http.CustomHeaderNames
 import uk.gov.hmrc.automatedexportsystemnotifications.models.requests.{AckBody, IncomingPayload}
 import uk.gov.hmrc.automatedexportsystemnotifications.parsers.EisPayloadXmlParser
+import uk.gov.hmrc.automatedexportsystemnotifications.responses.NotificationsErrorResponse.toErrorResponse
 import uk.gov.hmrc.automatedexportsystemnotifications.services.AesService
-import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.play.http.HeaderCarrierConverter
+import uk.gov.hmrc.automatedexportsystemnotifications.validation.RequiredHeaderValidator
+import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import java.time.{Clock, OffsetDateTime}
+import java.util.Locale
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.matching.Regex
+import scala.xml.NodeSeq
 
 @Singleton()
 class NotificationController @Inject() (
-  cc:                     ControllerComponents,
-  validatedRequestAction: ValidatedRequestAction,
-  aesService:             AesService,
-  clock:                  Clock
+  cc:                                   ControllerComponents,
+  notificationsXmlPayloadActionRefiner: NotificationsXmlPayloadActionRefiner,
+  correlatedPayloadActionRefiner:       CorrelatedPayloadActionRefiner,
+  requiredHeadersFilter:                RequiredHeadersFilter,
+  requiredAuthorizationFilter:          RequiredAuthorizationFilter[EisBearerTokenConfig],
+  aesService:                           AesService,
+  clock:                                Clock
 )(implicit ec: ExecutionContext)
-    extends AbstractController(cc)
+    extends BackendController(cc)
     with Logging:
+  import NotificationController.eitherTNotificationsServiceErrorWiden
 
-  def notification: Action[AnyContent] = validatedRequestAction.async { implicit req =>
-    process(req).map {
-      case Right(_) =>
-        NoContent
-      case Left(err: ClientError) =>
-        logger.warn(err.message)
-        BadRequest(err.message)
-      case Left(err: DownstreamError) =>
-        logger.error(err.message)
-        BadGateway("Failed to call AES backend service")
+  import scala.language.implicitConversions
+
+  private def isXmlContentType(request: RequestHeader): Boolean = {
+    val applicationXmlRegex: Regex = "application/.*\\+xml.*".r
+
+    request.contentType.exists { value =>
+      val lowerCaseValue: String = value.toLowerCase(Locale.ENGLISH)
+
+      lowerCaseValue.startsWith("text/xml") || lowerCaseValue
+        .startsWith("application/xml") || applicationXmlRegex.matches(lowerCaseValue)
     }
   }
 
-  private def process(req: Request[AnyContent])(implicit hc: HeaderCarrier): Future[Either[AppError, Unit]] =
-    extractXml(req) match {
-      case None =>
-        Future.successful(Left(ClientError("Missing XML payload")))
+  private lazy val xmlBodyParser: BodyParser[NodeSeq] =
+    parse.using { request =>
+      if isXmlContentType(request) then parse.xml
+      else
+        parse.error {
+          val error: RequestError = ExpectedXmlBodyError
 
-      case Some(xml) =>
-        EisPayloadXmlParser.parse(xml) match {
-          case Left(parseErr) =>
-            Future.successful(Left(ClientError(s"Invalid inbound payload: $parseErr")))
+          val context: Seq[String] =
+            Seq(error.message)
+              ++ request.headers
+                .get(CustomHeaderNames.X_CORRELATION_ID)
+                .map(value => s"correlationId=$value")
 
-          case Right(incoming) =>
-            val out = toNotification(incoming, req)
-            aesService
-              .sendNotification(
-                correlationId = out.correlationId,
-                eori = out.eori,
-                mrn = out.mrn,
-                status = out.status,
-                errors = out.errors
-              )
-              .map(_.left.map(e => DownstreamError(s"AES call failed: $e")))
+          logger.warn(context.mkString(" "))
+
+          Future.successful(ExpectedXmlBodyError.toErrorResponse.toResult)
         }
     }
 
-  private def extractXml(req: Request[AnyContent]): Option[String] =
-    req.body.asXml
-      .map(_.toString)
-      .orElse(req.body.asText)
-      .orElse(
-        req.body.asRaw.flatMap(raw =>
-          raw
-            .asBytes(raw.size)
-            .map(_.utf8String)
-        )
-      )
+  private def notificationAction: Action[NodeSeq] =
+    Action(xmlBodyParser)
+      .andThen(notificationsXmlPayloadActionRefiner)
+      .andThen(correlatedPayloadActionRefiner)
+      .async { implicit req =>
+        val result: EitherT[Future, NotificationsServiceError, Unit] =
+          readNotificationXml(req.xml, req.correlationId)
+            .flatMap(payload =>
+              val notification: NotificationPayload = toNotification(payload, req.correlationId)
 
-  private def toNotification(in: IncomingPayload, req: RequestHeader): NotificationPayload = {
-    val correlationId = req.headers.get("x-correlation-id").getOrElse("")
-    val now           = OffsetDateTime.now(clock)
+              aesService
+                .sendNotification(
+                  correlationId = notification.correlationId,
+                  eori = notification.eori,
+                  mrn = notification.mrn,
+                  status = notification.status,
+                  errors = notification.errors
+                )
+            )
+
+        result.fold(
+          error => error.toErrorResponse.toResult,
+          _ => Results.NoContent
+        )
+      }
+
+  def notification: EssentialAction =
+    val requiredNotificationHeadersFilter: EssentialFilter = requiredHeadersFilter(
+      NonEmptyList.one(RequiredHeaderValidator.xCorrelationId)
+    )
+
+    Filters(notificationAction, requiredNotificationHeadersFilter, requiredAuthorizationFilter)
+
+  private def readNotificationXml(xml: NodeSeq, correlationId: String): EitherT[Future, XmlFailedReadError, IncomingPayload] =
+    EitherT(Future.successful(EisPayloadXmlParser.parse(xml).leftMap { error =>
+      val xmlFailedReadError: XmlFailedReadError = XmlFailedReadError(error)
+
+      logger.warn(s"${xmlFailedReadError.message}. correlationId=$correlationId")
+
+      xmlFailedReadError
+    }))
+
+  private def toNotification(in: IncomingPayload, correlationId: String): NotificationPayload = {
+    val now = OffsetDateTime.now(clock)
 
     in match {
       case IncomingPayload.IE906(b) =>
@@ -157,9 +197,7 @@ class NotificationController @Inject() (
     }
   }
 
-  sealed trait AppError { def message: String }
-  case class ClientError(message: String) extends AppError
-  case class DownstreamError(message: String) extends AppError
-
-  private implicit def hc(implicit request: RequestHeader): HeaderCarrier =
-    HeaderCarrierConverter.fromRequestAndSession(request, request.session)
+object NotificationController:
+  given eitherTNotificationsServiceErrorWiden[F[_]: Functor, A <: NotificationsServiceError, B]
+    : Conversion[EitherT[F, A, B], EitherT[F, NotificationsServiceError, B]] =
+    et => et.leftWiden

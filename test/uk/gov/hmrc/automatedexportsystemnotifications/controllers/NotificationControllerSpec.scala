@@ -16,135 +16,68 @@
 
 package uk.gov.hmrc.automatedexportsystemnotifications.controllers
 
+import cats.data.EitherT
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.stream.Materializer
 import org.mockito.ArgumentMatchers
-import org.apache.pekko.util.ByteString
-import play.api.mvc.{AnyContentAsRaw, RawBuffer}
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.*
-import play.api.test.FakeRequest
+import org.scalatest.EitherValues
+import play.api.http.MimeTypes
+import play.api.mvc.{AnyContentAsEmpty, Result}
 import play.api.test.Helpers.*
-import uk.gov.hmrc.automatedexportsystemnotifications.controllers.actions.ValidatedRequestAction
-import uk.gov.hmrc.automatedexportsystemnotifications.helpers.BaseSpec
+import play.api.test.{FakeRequest, Helpers}
+import uk.gov.hmrc.automatedexportsystemnotifications.config.EisBearerTokenConfig
+import uk.gov.hmrc.automatedexportsystemnotifications.controllers.actions.{CorrelatedPayloadActionRefiner, NotificationsXmlPayloadActionRefiner}
+import uk.gov.hmrc.automatedexportsystemnotifications.controllers.filters.{RequiredAuthorizationFilter, RequiredHeadersFilter}
+import uk.gov.hmrc.automatedexportsystemnotifications.errors.AesServiceError
+import uk.gov.hmrc.automatedexportsystemnotifications.helpers.{BaseSpec, XmlOps}
 import uk.gov.hmrc.automatedexportsystemnotifications.models.aesRequest.*
 import uk.gov.hmrc.http.HeaderCarrier
-import play.api.test.Helpers.stubControllerComponents
 
 import java.time.{Clock, Instant, ZoneOffset}
-
 import scala.concurrent.Future
+import scala.xml.{Elem, NodeSeq}
 
-class NotificationControllerSpec extends BaseSpec {
+class NotificationControllerSpec extends BaseSpec, EitherValues {
 
   trait Setup:
     clearInvocations(mockService)
+
     when(mockAppConfig.eisToken).thenReturn("test-token")
+
+    val system: ActorSystem = ActorSystem()
+
+    given materializer: Materializer = Materializer(system)
+
     val fixedClock: Clock = Clock.fixed(Instant.parse("2026-08-11T12:00:00Z"), ZoneOffset.UTC)
 
     val cc = stubControllerComponents()
 
-    val validatedRequestAction: ValidatedRequestAction =
-      new ValidatedRequestAction(cc.parsers, mockAppConfig)
+    val notificationsXmlPayloadActionRefiner: NotificationsXmlPayloadActionRefiner =
+      NotificationsXmlPayloadActionRefiner()
 
+    val correlatedPayloadActionRefiner: CorrelatedPayloadActionRefiner =
+      new CorrelatedPayloadActionRefiner()
+
+    val eisBearerTokenConfig: EisBearerTokenConfig = EisBearerTokenConfig(mockAppConfig)
+
+    val requiredHeadersFilter: RequiredHeadersFilter = RequiredHeadersFilter()
+
+    val requiredAuthorizationFilter: RequiredAuthorizationFilter[EisBearerTokenConfig] =
+      RequiredAuthorizationFilter(eisBearerTokenConfig)
+
+    val controller: NotificationController =
+      new NotificationController(
+        cc,
+        notificationsXmlPayloadActionRefiner,
+        correlatedPayloadActionRefiner,
+        requiredHeadersFilter,
+        requiredAuthorizationFilter,
+        mockService,
+        fixedClock
+      )
   "NotificationController.notification" - {
-
-    "return 400 when xml payload is missing" in new Setup {
-      val request = FakeRequest(POST, "/notifications")
-        .withHeaders("Authorization" -> "Bearer test-token")
-
-      val controller = new NotificationController(cc, validatedRequestAction, mockService, fixedClock)
-
-      val result = controller.notification(request)
-
-      status(result)          shouldBe BAD_REQUEST
-      contentAsString(result) shouldBe "Request body is required"
-      verifyNoInteractions(mockService)
-    }
-
-    "return 400 when inbound xml is invalid" in new Setup {
-      val controller = new NotificationController(cc, validatedRequestAction, mockService, fixedClock)
-
-      val badXml =
-        """<AESDigitalNotification><Body><messageCode>CC507C</messageCode>"""
-      val badRequest = FakeRequest(POST, "/notifications").withTextBody(badXml).withHeaders("Authorization" -> "Bearer test-token")
-
-      val result = controller.notification(badRequest)
-
-      status(result)        shouldBe BAD_REQUEST
-      contentAsString(result) should include("Invalid XML payload")
-      verifyNoInteractions(mockService)
-    }
-
-    "return 204 when a notification payload is larger than 100 KB" in new Setup {
-      when(
-        mockService.sendNotification(
-          any[String],
-          any[String],
-          any[String],
-          any[NotificationStatus],
-          any[Option[List[NotificationError]]]
-        )(any[HeaderCarrier])
-      ).thenReturn(Future.successful(Right(())))
-
-      val largePadding = " " * 150000
-
-      val xml =
-        s"""<?xml version="1.0" encoding="UTF-8"?>
-           |<AESDigitalNotification xmlns="http://www.hmrc.gsi.gov.uk/eis">
-           |  <Header>
-           |    <messageSender>NECA.XI</messageSender>
-           |    <messageRecipient>GB123456789000</messageRecipient>
-           |    <preparationDateTime>2026-07-21T10:00:00</preparationDateTime>
-           |    <messageIdentification>f50929c4-39f5-4f33-8172-77a22588d</messageIdentification>
-           |    <messageType>ACK</messageType>
-           |    <correlationIdentifier>f50929c4-39f5-4f33-8172-77a22588d</correlationIdentifier>
-           |  </Header>
-           |  $largePadding
-           |  <Body>
-           |    <messageCode>CC507C</messageCode>
-           |    <actionCode>1</actionCode>
-           |    <MRN>26GB123456789ABCDE1</MRN>
-           |  </Body>
-           |</AESDigitalNotification>""".stripMargin
-
-      val payloadBytes = ByteString(xml, "UTF-8")
-      val rawBuffer    = mock[RawBuffer]
-
-      when(rawBuffer.size)
-        .thenReturn(payloadBytes.size.toLong)
-
-      when(rawBuffer.asBytes(payloadBytes.size.toLong))
-        .thenReturn(Some(payloadBytes))
-
-      val controller =
-        new NotificationController(
-          cc,
-          validatedRequestAction,
-          mockService,
-          fixedClock
-        )
-
-      val request =
-        FakeRequest(POST, "/notifications")
-          .withHeaders(
-            "Authorization"    -> "Bearer test-token",
-            "Content-Type"     -> "application/xml",
-            "Content-Length"   -> payloadBytes.size.toString,
-            "x-correlation-id" -> "corr-123"
-          )
-          .withBody(AnyContentAsRaw(rawBuffer))
-
-      val result = controller.notification(request)
-
-      status(result) shouldBe NO_CONTENT
-
-      verify(mockService, times(1)).sendNotification(
-        ArgumentMatchers.eq("corr-123"),
-        ArgumentMatchers.eq("GB123456789000"),
-        ArgumentMatchers.eq("26GB123456789ABCDE1"),
-        ArgumentMatchers.eq(NotificationStatus.Accepted),
-        ArgumentMatchers.eq(None)
-      )(any[HeaderCarrier])
-    }
 
     "return 204 when parse succeeds and service returns success" in new Setup {
       when(
@@ -155,34 +88,31 @@ class NotificationControllerSpec extends BaseSpec {
           any[NotificationStatus],
           any[Option[List[NotificationError]]]
         )(any[HeaderCarrier])
-      ).thenReturn(Future.successful(Right(())))
+      ).thenReturn(EitherT(Future.successful(Right(()))))
 
-      val controller = new NotificationController(cc, validatedRequestAction, mockService, fixedClock)
-
-      val xml =
-        """<?xml version="1.0" encoding="UTF-8"?>
-          |<AESDigitalNotification xmlns="http://www.hmrc.gsi.gov.uk/eis">
-          | <Header>
-          |    <messageSender>NECA.XI</messageSender>
-          |    <messageRecipient>GB123456789000</messageRecipient>
-          |    <preparationDateTime>2026-07-21T10:00:00</preparationDateTime>
-          |    <messageIdentification>f50929c4-39f5-4f33-8172-77a22588d</messageIdentification>
-          |    <messageType>ACK</messageType>
-          |    <correlationIdentifier>f50929c4-39f5-4f33-8172-77a22588d</correlationIdentifier>
-          | </Header>
-          | <Body>
-          |    <messageCode>CC507C</messageCode>
-          |    <actionCode>1</actionCode>
-          |    <MRN>26GB123456789ABCDE1</MRN>
-          | </Body>
-          |</AESDigitalNotification>""".stripMargin
+      val xml: Elem =
+        <AESDigitalNotification xmlns="http://www.hmrc.gsi.gov.uk/eis">
+         <Header>
+            <messageSender>NECA.XI</messageSender>
+            <messageRecipient>GB123456789000</messageRecipient>
+            <preparationDateTime>2026-07-21T10:00:00</preparationDateTime>
+            <messageIdentification>f50929c4-39f5-4f33-8172-77a22588d</messageIdentification>
+            <messageType>ACK</messageType>
+            <correlationIdentifier>f50929c4-39f5-4f33-8172-77a22588d</correlationIdentifier>
+         </Header>
+         <Body>
+            <messageCode>CC507C</messageCode>
+            <actionCode>1</actionCode>
+            <MRN>26GB123456789ABCDE1</MRN>
+         </Body>
+        </AESDigitalNotification>
 
       val request =
         FakeRequest(POST, "/notifications")
-          .withTextBody(xml)
+          .withBody(xml)
           .withHeaders("x-correlation-id" -> "corr-123", "Authorization" -> "Bearer test-token")
 
-      val result = controller.notification(request)
+      val result = Helpers.call(controller.notification, request)
 
       status(result) shouldBe NO_CONTENT
       verify(mockService, times(1)).sendNotification(
@@ -195,59 +125,45 @@ class NotificationControllerSpec extends BaseSpec {
     }
 
     "return 204 when parse succeeds with multiple IE906 FunctionalErrors and service returns success" in new Setup {
-      val controller = new NotificationController(cc, validatedRequestAction, mockService, fixedClock)
-
-      val xml =
-        """<AESDigitalNotification xmlns="http://www.hmrc.gsi.gov.uk/eis">
-          |<Header>
-          |    <messageSender>NECA.XI</messageSender>
-          |    <messageRecipient>GB123456789000</messageRecipient>
-          |    <preparationDateTime>2026-07-21T10:00:00</preparationDateTime>
-          |    <messageIdentification>f50929c4-39f5-4f33-8172-77a22588d</messageIdentification>
-          |    <messageType>CD906C</messageType>
-          |    <correlationIdentifier>f50929c4-39f5-4f33-8172-77a22588d</correlationIdentifier>
-          |</Header>
-          |<Body>
-          |    <messageCode>CC507C</messageCode>
-          |    <MRN>26GB123456789ABCDE1</MRN>
-          |    <FunctionalError>
-          |      <errorPointer>Body.ExportOperation.MRN</errorPointer>
-          |      <errorCode>90</errorCode>
-          |      <errorReason>reason-1</errorReason>
-          |      <originalAttributeValue>26GB123</originalAttributeValue>
-          |    </FunctionalError>
-          |
-          |    <FunctionalError>
-          |      <errorPointer> Body.GoodsShipment.Consignment.ReferenceNumberUCRID </errorPointer>
-          |      <errorCode>96</errorCode>
-          |      <errorReason>reason-2</errorReason>
-          |      <originalAttributeValue>DUCR001</originalAttributeValue>
-          |    </FunctionalError>
-          |
-          |    <FunctionalError>
-          |      <errorPointer>Body.Unknown.Path </errorPointer>
-          |      <errorCode>12345</errorCode>
-          |      <errorReason>reason-3</errorReason>
-          |    </FunctionalError>
-          |  </Body>
-          |</AESDigitalNotification>""".stripMargin
-
-      when(
-        mockService.sendNotification(
-          any[String],
-          any[String],
-          any[String],
-          any[NotificationStatus],
-          any[Option[List[NotificationError]]]
-        )(any[HeaderCarrier])
-      ).thenReturn(Future.successful(Right(())))
+      val xml: Elem =
+        <AESDigitalNotification xmlns="http://www.hmrc.gsi.gov.uk/eis">
+          <Header>
+              <messageSender>NECA.XI</messageSender>
+              <messageRecipient>GB123456789000</messageRecipient>
+              <preparationDateTime>2026-07-21T10:00:00</preparationDateTime>
+              <messageIdentification>f50929c4-39f5-4f33-8172-77a22588d</messageIdentification>
+              <messageType>CD906C</messageType>
+              <correlationIdentifier>f50929c4-39f5-4f33-8172-77a22588d</correlationIdentifier>
+          </Header>
+          <Body>
+              <messageCode>CC507C</messageCode>
+              <MRN>26GB123456789ABCDE1</MRN>
+              <FunctionalError>
+                <errorPointer>Body.ExportOperation.MRN</errorPointer>
+                <errorCode>90</errorCode>
+                <errorReason>reason-1</errorReason>
+                <originalAttributeValue>26GB123</originalAttributeValue>
+              </FunctionalError>
+              <FunctionalError>
+                <errorPointer> Body.GoodsShipment.Consignment.ReferenceNumberUCRID </errorPointer>
+                <errorCode>96</errorCode>
+                <errorReason>reason-2</errorReason>
+                <originalAttributeValue>DUCR001</originalAttributeValue>
+              </FunctionalError>
+              <FunctionalError>
+                <errorPointer>Body.Unknown.Path </errorPointer>
+                <errorCode>12345</errorCode>
+                <errorReason>reason-3</errorReason>
+              </FunctionalError>
+            </Body>
+          </AESDigitalNotification>
 
       val request =
         FakeRequest(POST, "/notifications")
-          .withTextBody(xml)
+          .withBody(xml)
           .withHeaders("x-correlation-id" -> "corr-123", "Authorization" -> "Bearer test-token")
 
-      val result = controller.notification(request)
+      val result = Helpers.call(controller.notification, request)
 
       status(result) shouldBe NO_CONTENT
 
@@ -282,50 +198,46 @@ class NotificationControllerSpec extends BaseSpec {
             )
           )
         )(any[HeaderCarrier])
-      ).thenReturn(Future.successful(Right(())))
+      ).thenReturn(EitherT(Future.successful(Right(()))))
     }
 
     "return 204 when parse succeeds with multiple IE917 XmlErrors and service returns success" in new Setup {
-      val controller = new NotificationController(cc, validatedRequestAction, mockService, fixedClock)
+      val xml: Elem =
+        <AESDigitalNotification xmlns="http://www.hmrc.gsi.gov.uk/eis">
+          <Header>
+              <messageSender>NECA.XI</messageSender>
+              <messageRecipient>GB123456789000</messageRecipient>
+              <preparationDateTime>2026-07-21T10:00:00</preparationDateTime>
+              <messageIdentification>f50929c4-39f5-4f33-8172-77a22588d</messageIdentification>
+              <messageType>CD917C</messageType>
+              <correlationIdentifier>f50929c4-39f5-4f33-8172-77a22588d</correlationIdentifier>
+          </Header>
+          <Body>
+              <messageCode>CD917C</messageCode>
+              <MRN>26GB123456789ABCDE1</MRN>
+              <XmlError>
+                <errorPointer>Body.ExportOperation.MRN</errorPointer>
+                <errorCode>13</errorCode>
+                <errorText>reason-1</errorText>
+                <originalAttributeValue>26GB123</originalAttributeValue>
+              </XmlError>
+              <XmlError>
+                <errorPointer>Body.GoodsShipment.Consignment.ReferenceNumberUCRID</errorPointer>
+                <errorCode>15</errorCode>
+                <errorText>reason-2</errorText>
+                <originalAttributeValue>DUCR001</originalAttributeValue>
+              </XmlError>
+              <XmlError>
+                <errorPointer>Body.Unknown.Path</errorPointer>
+                <errorCode>12345</errorCode>
+                <errorText>reason-3</errorText>
+              </XmlError>
+            </Body>
+          </AESDigitalNotification>
 
-      val xml =
-        """<AESDigitalNotification xmlns="http://www.hmrc.gsi.gov.uk/eis">
-          |<Header>
-          |    <messageSender>NECA.XI</messageSender>
-          |    <messageRecipient>GB123456789000</messageRecipient>
-          |    <preparationDateTime>2026-07-21T10:00:00</preparationDateTime>
-          |    <messageIdentification>f50929c4-39f5-4f33-8172-77a22588d</messageIdentification>
-          |    <messageType>CD917C</messageType>
-          |    <correlationIdentifier>f50929c4-39f5-4f33-8172-77a22588d</correlationIdentifier>
-          |</Header>
-          |<Body>
-          |    <messageCode>CD917C</messageCode>
-          |    <MRN>26GB123456789ABCDE1</MRN>
-          |    <XmlError>
-          |      <errorPointer>Body.ExportOperation.MRN</errorPointer>
-          |      <errorCode>13</errorCode>
-          |      <errorText>reason-1</errorText>
-          |      <originalAttributeValue>26GB123</originalAttributeValue>
-          |    </XmlError>
-          |
-          |    <XmlError>
-          |      <errorPointer>Body.GoodsShipment.Consignment.ReferenceNumberUCRID</errorPointer>
-          |      <errorCode>15</errorCode>
-          |      <errorText>reason-2</errorText>
-          |      <originalAttributeValue>DUCR001</originalAttributeValue>
-          |    </XmlError>
-          |
-          |    <XmlError>
-          |      <errorPointer>Body.Unknown.Path</errorPointer>
-          |      <errorCode>12345</errorCode>
-          |      <errorText>reason-3</errorText>
-          |    </XmlError>
-          |  </Body>
-          |</AESDigitalNotification>""".stripMargin
-
-      val request =
+      val request: FakeRequest[NodeSeq] =
         FakeRequest(POST, "/notifications")
-          .withTextBody(xml)
+          .withBody(xml)
           .withHeaders("x-correlation-id" -> "corr-123", "Authorization" -> "Bearer test-token")
 
       when(
@@ -359,14 +271,112 @@ class NotificationControllerSpec extends BaseSpec {
             )
           )
         )(any[HeaderCarrier])
-      ).thenReturn(Future.successful(Right(())))
+      ).thenReturn(EitherT(Future.successful(Right(()))))
 
-      val result = controller.notification(request)
+      val result = Helpers.call(controller.notification, request)
 
       status(result) shouldBe NO_CONTENT
     }
 
-    "return 502 when service returns Left" in new Setup {
+    "return 400 when correlationId header is missing" in new Setup {
+      val request: FakeRequest[AnyContentAsEmpty.type] =
+        FakeRequest(POST, "/notifications")
+          .withHeaders("Authorization" -> "Bearer test-token")
+
+      val result: Future[Result] = Helpers.call(controller.notification, request)
+
+      val resultContent: String  = Helpers.contentAsString(result)
+      val resultXml:     NodeSeq = XmlOps.loadXmlFromString(resultContent).value
+
+      val headerFailedValidationErrorResponseXml: Elem =
+        <NotificationsErrorResponse>
+          <status>400</status>
+          <message>Header validation failed</message>
+          <errors>
+            <error>
+              <headerName>X-Correlation-Id</headerName>
+              <message>Missing required header</message>
+            </error>
+          </errors>
+        </NotificationsErrorResponse>
+
+      Helpers.status(result)      shouldBe Helpers.BAD_REQUEST
+      Helpers.contentType(result) shouldBe Some(MimeTypes.XML)
+      XmlOps.normalize(resultXml) shouldBe XmlOps.normalize(headerFailedValidationErrorResponseXml)
+    }
+
+    "return 401 when authorization fails" in new Setup {
+      val request: FakeRequest[AnyContentAsEmpty.type] =
+        FakeRequest(POST, "/notifications")
+          .withHeaders(
+            "Authorization"    -> "Bearer not-correct-token",
+            "x-correlation-id" -> "correlationId"
+          )
+
+      val result: Future[Result] = Helpers.call(controller.notification, request)
+
+      val resultContent: String  = Helpers.contentAsString(result)
+      val resultXml:     NodeSeq = XmlOps.loadXmlFromString(resultContent).value
+
+      val invalidAuthorizationHeaderErrorResponseXml: Elem =
+        <NotificationsErrorResponse>
+          <status>401</status>
+          <message>Request Authorization header is invalid. Invalid header.</message>
+        </NotificationsErrorResponse>
+
+      Helpers.status(result)      shouldBe Helpers.UNAUTHORIZED
+      Helpers.contentType(result) shouldBe Some(MimeTypes.XML)
+      XmlOps.normalize(resultXml) shouldBe XmlOps.normalize(invalidAuthorizationHeaderErrorResponseXml)
+    }
+
+    "return 415 when xml payload is missing" in new Setup {
+      val request = FakeRequest(POST, "/notifications")
+        .withHeaders(
+          "Authorization"    -> "Bearer test-token",
+          "x-correlation-id" -> "correlationId"
+        )
+
+      val result: Future[Result] = Helpers.call(controller.notification, request)
+
+      val resultContent: String  = Helpers.contentAsString(result)
+      val resultXml:     NodeSeq = XmlOps.loadXmlFromString(resultContent).value
+
+      val expectedXmlBodyErrorResponseXml: Elem =
+        <NotificationsErrorResponse>
+          <status>415</status>
+          <message>The body of the request is not valid XML</message>
+        </NotificationsErrorResponse>
+
+      Helpers.status(result)      shouldBe Helpers.UNSUPPORTED_MEDIA_TYPE
+      Helpers.contentType(result) shouldBe Some(MimeTypes.XML)
+      XmlOps.normalize(resultXml) shouldBe XmlOps.normalize(expectedXmlBodyErrorResponseXml)
+    }
+
+    "return 415 when payload is not valid xml" in new Setup {
+      val request = FakeRequest(POST, "/notifications")
+        .withHeaders(
+          "Authorization"    -> "Bearer test-token",
+          "x-correlation-id" -> "correlationId"
+        )
+        .withBody("non-xml-body")
+
+      val result: Future[Result] = Helpers.call(controller.notification, request)
+
+      val resultContent: String  = Helpers.contentAsString(result)
+      val resultXml:     NodeSeq = XmlOps.loadXmlFromString(resultContent).value
+
+      val expectedXmlBodyErrorXml: Elem =
+        <NotificationsErrorResponse>
+          <status>415</status>
+          <message>The body of the request is not valid XML</message>
+        </NotificationsErrorResponse>
+
+      Helpers.status(result)      shouldBe Helpers.UNSUPPORTED_MEDIA_TYPE
+      Helpers.contentType(result) shouldBe Some(MimeTypes.XML)
+      XmlOps.normalize(resultXml) shouldBe XmlOps.normalize(expectedXmlBodyErrorXml)
+    }
+
+    "return 500 when service returns a 500 error" in new Setup {
 
       when(
         mockService.sendNotification(
@@ -376,37 +386,116 @@ class NotificationControllerSpec extends BaseSpec {
           any[NotificationStatus],
           any[Option[List[NotificationError]]]
         )(any[HeaderCarrier])
-      ).thenReturn(Future.successful(Left("downstream failed")))
+      ).thenReturn(
+        EitherT(
+          Future.successful(
+            Left(
+              AesServiceError.NotificationFailedError(
+                "Notification failed",
+                Helpers.INTERNAL_SERVER_ERROR
+              )
+            )
+          )
+        )
+      )
 
-      val controller = new NotificationController(cc, validatedRequestAction, mockService, fixedClock)
-
-      val xml =
-        """<?xml version="1.0" encoding="UTF-8"?>
-          |<AESDigitalNotification xmlns="http://www.hmrc.gsi.gov.uk/eis">
-          | <Header>
-          |    <messageSender>NECA.XI</messageSender>
-          |    <messageRecipient>GB123456789000</messageRecipient>
-          |    <preparationDateTime>2026-07-21T10:00:00</preparationDateTime>
-          |    <messageIdentification>f50929c4-39f5-4f33-8172-77a22588d</messageIdentification>
-          |    <messageType>ACK</messageType>
-          |    <correlationIdentifier>f50929c4-39f5-4f33-8172-77a22588d</correlationIdentifier>
-          | </Header>
-          | <Body>
-          |    <messageCode>CC507C</messageCode>
-          |    <actionCode>1</actionCode>
-          |    <MRN>26GB123456789ABCDE1</MRN>
-          | </Body>
-          |</AESDigitalNotification>""".stripMargin
+      val xml: Elem =
+        <AESDigitalNotification xmlns="http://www.hmrc.gsi.gov.uk/eis">
+         <Header>
+            <messageSender>NECA.XI</messageSender>
+            <messageRecipient>GB123456789000</messageRecipient>
+            <preparationDateTime>2026-07-21T10:00:00</preparationDateTime>
+            <messageIdentification>f50929c4-39f5-4f33-8172-77a22588d</messageIdentification>
+            <messageType>ACK</messageType>
+            <correlationIdentifier>f50929c4-39f5-4f33-8172-77a22588d</correlationIdentifier>
+         </Header>
+         <Body>
+            <messageCode>CC507C</messageCode>
+            <actionCode>1</actionCode>
+            <MRN>26GB123456789ABCDE1</MRN>
+         </Body>
+        </AESDigitalNotification>
 
       val request =
         FakeRequest(POST, "/notifications")
-          .withTextBody(xml)
+          .withBody(xml)
           .withHeaders("x-correlation-id" -> "corr-123", "Authorization" -> "Bearer test-token")
 
-      val result = controller.notification(request)
+      val result = Helpers.call(controller.notification, request)
 
-      status(result)          shouldBe BAD_GATEWAY
-      contentAsString(result) shouldBe "Failed to call AES backend service"
+      val resultContent: String  = Helpers.contentAsString(result)
+      val resultXml:     NodeSeq = XmlOps.loadXmlFromString(resultContent).value
+
+      val notificationFailedErrorResponseXml: Elem =
+        <NotificationsErrorResponse>
+          <status>500</status>
+          <message>Notification failed</message>
+        </NotificationsErrorResponse>
+
+      Helpers.status(result)      shouldBe Helpers.INTERNAL_SERVER_ERROR
+      Helpers.contentType(result) shouldBe Some(MimeTypes.XML)
+      XmlOps.normalize(resultXml) shouldBe XmlOps.normalize(notificationFailedErrorResponseXml)
+    }
+
+    "return 502 when service returns a 502 error" in new Setup {
+
+      when(
+        mockService.sendNotification(
+          any[String],
+          any[String],
+          any[String],
+          any[NotificationStatus],
+          any[Option[List[NotificationError]]]
+        )(any[HeaderCarrier])
+      ).thenReturn(
+        EitherT(
+          Future.successful(
+            Left(
+              AesServiceError.NotificationFailedError(
+                "Notification failed",
+                Helpers.BAD_GATEWAY
+              )
+            )
+          )
+        )
+      )
+
+      val xml: Elem =
+        <AESDigitalNotification xmlns="http://www.hmrc.gsi.gov.uk/eis">
+          <Header>
+            <messageSender>NECA.XI</messageSender>
+            <messageRecipient>GB123456789000</messageRecipient>
+            <preparationDateTime>2026-07-21T10:00:00</preparationDateTime>
+            <messageIdentification>f50929c4-39f5-4f33-8172-77a22588d</messageIdentification>
+            <messageType>ACK</messageType>
+            <correlationIdentifier>f50929c4-39f5-4f33-8172-77a22588d</correlationIdentifier>
+          </Header>
+          <Body>
+            <messageCode>CC507C</messageCode>
+            <actionCode>1</actionCode>
+            <MRN>26GB123456789ABCDE1</MRN>
+          </Body>
+        </AESDigitalNotification>
+
+      val request =
+        FakeRequest(POST, "/notifications")
+          .withBody(xml)
+          .withHeaders("x-correlation-id" -> "corr-123", "Authorization" -> "Bearer test-token")
+
+      val result = Helpers.call(controller.notification, request)
+
+      val resultContent: String  = Helpers.contentAsString(result)
+      val resultXml:     NodeSeq = XmlOps.loadXmlFromString(resultContent).value
+
+      val notificationFailedErrorResponseXml: Elem =
+        <NotificationsErrorResponse>
+          <status>502</status>
+          <message>Notification failed</message>
+        </NotificationsErrorResponse>
+
+      Helpers.status(result)      shouldBe Helpers.BAD_GATEWAY
+      Helpers.contentType(result) shouldBe Some(MimeTypes.XML)
+      XmlOps.normalize(resultXml) shouldBe XmlOps.normalize(notificationFailedErrorResponseXml)
     }
   }
 }

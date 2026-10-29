@@ -27,7 +27,7 @@ object EisPayloadXmlParser extends Logging:
   def parse(xmlString: String): Either[String, IncomingPayload] =
     Try(scala.xml.XML.loadString(xmlString)).toEither.left.map(_.getMessage).flatMap(parse)
 
-  def parse(xml: Elem): Either[String, IncomingPayload] =
+  def parse(xml: NodeSeq): Either[String, IncomingPayload] =
     for
       header      <- Helpers.requiredNode(xml, "Header")
       body        <- Helpers.requiredNode(xml, "Body")
@@ -40,7 +40,7 @@ object EisPayloadXmlParser extends Logging:
                    case other    => Left(s"Unsupported messageType: $other")
     yield payload
 
-  def parseAck(root: Node, body: Node): Either[String, AckBody] =
+  def parseAck(root: NodeSeq, body: Node): Either[String, AckBody] =
     for
       actionCode <- Helpers.optionalText(body, "actionCode") match
                       case None    => Right(1)
@@ -50,7 +50,7 @@ object EisPayloadXmlParser extends Logging:
       eori   <- Helpers.requiredText(header, "messageRecipient")
     yield AckBody(ActionCode = actionCode, MRN = mrn, eori = eori)
 
-  private def parseIE906(root: Node, body: Node): Either[String, IE906Body] =
+  private def parseIE906(root: NodeSeq, body: Node): Either[String, IE906Body] =
     for
       mrn    <- Helpers.requiredText(body, "MRN")
       header <- Helpers.requiredNode(root, "Header")
@@ -58,7 +58,7 @@ object EisPayloadXmlParser extends Logging:
       errors <- parseFunctionalErrors(body.child.collect { case n: Node if n.label == "FunctionalError" => n })
     yield IE906Body(MRN = mrn, eori = eori, FunctionalError = errors)
 
-  private def parseIE917(root: Node, body: Node): Either[String, IE917Body] =
+  private def parseIE917(root: NodeSeq, body: Node): Either[String, IE917Body] =
     for
       mrn           <- Helpers.requiredText(body, "MRN")
       header        <- Helpers.requiredNode(root, "Header")

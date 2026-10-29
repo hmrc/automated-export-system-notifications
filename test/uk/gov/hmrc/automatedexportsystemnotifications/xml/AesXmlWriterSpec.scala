@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.automatedexportsystemnotifications.xmlWriters
+package uk.gov.hmrc.automatedexportsystemnotifications.xml
 
 import org.scalactic.Prettifier.default
 import uk.gov.hmrc.automatedexportsystemnotifications.helpers.BaseSpec
