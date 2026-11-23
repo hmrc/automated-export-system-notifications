@@ -10,7 +10,7 @@ For more information on the payload and schemas,go to [our confluence page](http
 
 ### Running all tests and coverage report
 To run all tests and generate a coverage report, use this command
-`sbt scalafmt test:scalafmt it:test::scalafmt coverage test it/test coverageReport`
+`sbt runAllChecks`
 
 ### Endpoints
 `POST        /notification `: This is the notification endpoint that receives notifications from the EIS and sends them to the frontend. The payload is in XML format. For more information on the payload and schemas, go to [our confluence page](https://confluence.tools.tax.service.gov.uk/spaces/AES/pages/1364590770/Request+from+notification+endpoint)
